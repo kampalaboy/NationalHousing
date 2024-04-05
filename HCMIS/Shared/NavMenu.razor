@@ -1,0 +1,94 @@
+﻿@using HCMIS.Model
+@using System.Text.Json
+@inject ILocalStorageService localStore;
+@inject HttpClient Http
+@inject ApiConfig _ApiConfig;
+@inject NavigationManager Navigation;
+@inject AppState AppState;
+@inject SystemSettings _SystemSettings
+
+<div class="top-row ps-3 navbar navbar-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="">HCMIS</a>
+        <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+    </div>
+</div>
+
+<div class="@NavMenuCssClass" @onclick="ToggleNavMenu">
+    <nav class="flex-column">
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="Dashboard" @onclick="@(()=>{menuClicked("Dashboard");})">
+                <span class="oi oi-dashboard" aria-hidden="true"></span> Dashboard
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="NonStaffProfilePage" @onclick="@(()=>{menuClicked("NonStaffProfilePage");})">
+                <span class="oi oi-person" aria-hidden="true"></span> Profile
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="OrganisationStructurePage" @onclick="@(()=>{menuClicked("OrganisationStructurePage");})">
+                <span class="oi oi-fork" aria-hidden="true"></span> Organisation Structure
+            </NavLink>
+        </div>
+       @* <div class="nav-item px-3">
+            <NavLink class="nav-link" href="counter" @onclick="@(()=>{menuClicked("counter");})">
+                <span class="oi oi-plus" aria-hidden="true"></span> Counter
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="fetchdata" @onclick="@(()=>{menuClicked("fetchdata");})">
+                <span class="oi oi-list-rich" aria-hidden="true"></span> Fetch data
+            </NavLink>
+        </div>*@
+        @if (!string.IsNullOrEmpty(_SystemSettings.AccountHolderName))
+        {
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="@PreviousUrl">
+                    <span class="oi oi-person" aria-hidden="true" style="margin-right:5px;"></span> @_SystemSettings.AccountHolderName
+                </NavLink>
+            </div>
+        }
+        
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="@PreviousUrl" @onclick="@LoggoutClicked">
+                <span class="oi oi-account-logout" aria-hidden="true"></span> LogOut
+            </NavLink>
+        </div>
+    </nav>
+</div>
+
+@code {
+    private bool collapseNavMenu = true;
+    string PreviousUrl { get; set; } = "Dashboard";
+
+    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+
+    private void ToggleNavMenu()
+    {
+        collapseNavMenu = !collapseNavMenu;
+    }
+    private void menuClicked(string url)
+    {
+        PreviousUrl = url;
+    }
+    private async Task LoggoutClicked()
+    {
+        await localStore.ClearAsync();
+        AppState.LoggedIn = false;
+        Navigation.NavigateTo("/");
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await _SystemSettings.GetLoginCredentials();
+        if (!string.IsNullOrEmpty(Navigation.Uri.Split('/').LastOrDefault()))
+        {
+            string _nav = Navigation.Uri.Split('/').LastOrDefault().ToString();
+            PreviousUrl = _nav;
+        }
+        
+    }
+}

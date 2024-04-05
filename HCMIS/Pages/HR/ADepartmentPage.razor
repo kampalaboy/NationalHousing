@@ -1,0 +1,865 @@
+﻿@*@page "/ADepartmentPage"*@
+@using Syncfusion.Blazor.Diagram
+@using HCMIS.Data
+@using HCMIS.Model
+@using System.Text.Json
+@using HCMIS.ViewModel
+@using System.Collections;
+@inject HttpClient Http
+@inject AppState AppState
+@inject ApiConfig _ApiConfig;
+@inject NavigationManager Navigation
+@inject DocumentUploadModel _DocumentUploadModel;
+@inject SystemSettings _SystemSettings
+<style>
+    .e-orgchart-template-div-style{
+        background-color: darkslategray;
+        color: ghostwhite;
+        padding: 10px;
+        vertical-align: middle;
+        border-radius:5px;
+            height: 100%;
+    }
+</style>
+<div class="row">
+    <div class="col-lg-12 control-section">
+        <SfToast @ref="ToastObj" ID="toast_type">
+            <ToastPosition X="@ToastPosition"></ToastPosition>
+        </SfToast>
+    </div>
+</div>
+@*<ol class="breadcrumb" style="margin-top:5px;">
+   <li class="breadcrumb-item active" style="width: 100%; background-color: bisque; color: brown; font-family: Cambria; padding: 10px; font: bolder;"> <strong> Department </strong></li>
+</ol>*@
+
+<div class="row">
+    <div  class="col-md-12">
+        <h3>Department <SfButton CssClass="e-primary" OnClick="@OnBtnClick" Content="View Department Structure" style="float:right;"></SfButton></h3>
+    </div>
+    <div class="col-md-12">
+        <SfGrid @ref="DepartmentGrid" TValue="ADepartment"
+                                    Toolbar="@(new string[] {"Add","Edit","Delete","Update","Cancel","ColumnChooser"})" AllowGrouping="false" ShowColumnChooser="true" AllowTextWrap="true"
+                                    AllowPaging="true" AllowFiltering="true" FilterType="Syncfusion.Blazor.DropDowns.FilterType.Contains" GridLines="GridLine.Both" AllowSelection="true">
+                                @*<GridGroupSettings Columns="@GroupedColumns"></GridGroupSettings>*@
+                                <SfDataManager AdaptorInstance="@typeof(ADepartmentAdapter)" Adaptor="Adaptors.CustomAdaptor"></SfDataManager>
+                                <GridSelectionSettings Mode="Syncfusion.Blazor.Grids.SelectionMode.Row" Type="Syncfusion.Blazor.Grids.SelectionType.Single"></GridSelectionSettings>
+                                <GridSearchSettings IgnoreCase="true"></GridSearchSettings>
+                               @* OnActionBegin="OnDepartmentActionBegin"*@
+                                <GridEvents  OnActionComplete="@OnDepartmentActionComplete" TValue="ADepartment"></GridEvents>
+                                <GridEditSettings AllowAdding="true" AllowDeleting="false" AllowEditing="true" Mode="@EditMode.Dialog" Dialog="DialogParams">
+
+                                    <HeaderTemplate>
+                                        @{
+                                            var text = GetDepartmentHeader((context as ADepartment));
+                                                                        <div class="headerbandimg" /><span>@text</span>
+                                        }
+                                    </HeaderTemplate>
+                                    <Template Context="DepartmentContext">
+                                        @{
+                                            DepartmentReviewData = (DepartmentContext as ADepartment);
+                                            if(DepartmentReviewData != null)
+                                            {
+                                                                            <div style="padding:15px;">
+                                                                                <div class="row">
+                                                                                    <div class="col-md-12" hidden>
+                                                                                        <SfNumericTextBox @bind-Value="@(DepartmentReviewData.DepartmentId)" Enabled="false" Placeholder="BranchId" Format="N0" FloatLabelType="FloatLabelType.Always"></SfNumericTextBox>
+                                                                                    </div>
+                                                                                    <div class="col-md-12">
+                                                                                         <p>Department</p>
+                                                                                        <SfTextBox Multiline="false" @bind-Value="@(DepartmentReviewData.DepartmentDescription)" Enabled="true" Placeholder="Enter Name" FloatLabelType="FloatLabelType.Never"></SfTextBox>
+                                                                                    </div>
+                                                                                   <div class="col-md-12">
+                                                                                        <p>Reports To</p>
+                                                                                         <SfMultiSelect @ref="DepartmentObj" TValue="int[]" TItem="ADepartment" AllowFiltering="true" Placeholder="Please select" Mode="@VisualMode.CheckBox" DataSource="@DepartmentData"
+                                                                     ShowSelectAll="true" EnableSelectionOrder="true" ShowDropDownIcon="true" FilterBarPlaceholder="--- Please select---" FloatLabelType="FloatLabelType.Never"
+                                                                     PopupHeight="350px" FilterType="Syncfusion.Blazor.DropDowns.FilterType.Contains">
+                                                                                            <MultiSelectFieldSettings Value="@nameof(ADepartment.DepartmentId)" Text="@nameof(ADepartment.DepartmentDescription)"></MultiSelectFieldSettings>
+                                                                                            <MultiSelectEvents TValue="int[]" TItem="ADepartment" ValueChange="OnDepartmentChange" DataBound="OnDepartmentBound"></MultiSelectEvents>
+                                                                                         </SfMultiSelect>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                            }
+                                           
+                                        }
+                                    </Template>
+                                </GridEditSettings>
+                                <GridFilterSettings Type="Syncfusion.Blazor.Grids.FilterType.Excel"></GridFilterSettings>
+                                <GridPageSettings PageSize="20"></GridPageSettings>
+                                <GridColumns>
+                                    <GridColumn Type="ColumnType.CheckBox" Width="50"></GridColumn>
+                                    <GridColumn Field=@nameof(ADepartment.DepartmentId) HeaderText="PatientId" TextAlign="Syncfusion.Blazor.Grids.TextAlign.Left" IsPrimaryKey="true" IsIdentity="true" Visible="false" Width="100"></GridColumn>
+                                    <GridColumn Field=@nameof(ADepartment.DepartmentDescription) HeaderText="Title Description" Width="150"></GridColumn>
+                                    @*<GridColumn Field=@nameof(ADepartment.ReportsTo) HeaderText="Reports To" Width="150"></GridColumn>*@
+                                    <GridColumn HeaderText="Reports To" Width="250">
+                                                                                                            <Template>
+                        @{
+                            if(DepartmentData != null)
+                            {
+                                var data = (context as ADepartment);
+                                                                                                                    if (data != null &&!string.IsNullOrEmpty(data.ReportsTo))
+                                                                                                                    {
+                                                                                                                        string result = string.Empty;
+                                                                                                                        var a = data.ReportsTo.Split(",");
+                                                                                                                        int count = 1;
+                                                                                                                        foreach (var n in a)
+                                                                                                                        {
+                                                                                                                            int b = Convert.ToInt32(n.Trim());
+                                                                                                                            var x = DepartmentData.FirstOrDefault(o => o.DepartmentId == b);
+                                                                                                                            if (x != null)
+                                                                                                                            {
+                                                                                                                                if (count != a.Length)
+                                                                                                                                {
+                                                                                                                                    result += x.DepartmentDescription + ", ";
+                                                                                                                                }
+                                                                                                                                else
+                                                                                                                                {
+                                                                                                                                    result += x.DepartmentDescription;
+                                                                                                                                }
+                                                                                                                            }
+                                                                                                                            count++;
+                                                                                                                        }
+                                                                                                                                            <p>@result</p>
+                                                                                                                    }
+                                                                                                                    else
+                                                                                                                    {
+                                                                                                                                            <p></p>
+                                                                                                                    }
+                            }
+                            
+                                                                                                                }
+                                                                                                            </Template>
+                                                                                                        </GridColumn>
+                                </GridColumns>
+            </SfGrid>
+    </div>
+    <div class="col-md-12">
+       @if (!string.IsNullOrEmpty(ErrorMessage))
+        {
+            <p class="alert-danger" style="padding:10px;">@ErrorMessage</p>
+        }
+    </div>
+    <div class="col-md-12">
+        <SfDialog Target=".page" Width="95%" Height="auto" ShowCloseIcon="true" @bind-Visible="Visibility">
+        <DialogTemplates>
+            <Header> Department Organisation Structure </Header>
+            <Content>
+                 <SfDiagramComponent @ref="@Diagram" Height="500px" NodeCreating="@OnNodeCreating" ConnectorCreating="@OnConnectorCreating" InteractionController="@DiagramInteractions.ZoomPan">
+                    <ScrollSettings @bind-ScrollLimit="@scrollLimit"></ScrollSettings>
+                    <DataSourceSettings ID="Id" ParentID="ReportingPerson" DataSource="DataSource"></DataSourceSettings>
+                    <Layout @bind-Type="@Type" @bind-HorizontalSpacing="@HorizontalSpacing" @bind-Orientation="@OrientationType" @bind-VerticalSpacing="@VerticalSpacing" @bind-HorizontalAlignment="@HorizontalAlignment" @bind-VerticalAlignment="@VerticalAlignment" GetLayoutInfo="GetLayoutInfo">
+                        <LayoutMargin @bind-Top="@Top" @bind-Bottom="@Bottom" @bind-Right="@Right" @bind-Left="@Left"></LayoutMargin>
+                    </Layout>
+                    <SnapSettings Constraints="SnapConstraints.None"></SnapSettings>
+                    <DiagramTemplates>
+                        <NodeTemplate>
+                            @{
+                                Node node1 = (context as Node);
+                                string Name = (node1.Data as HierarchicalDetails).Label;
+                                //string Role = (node1.Data as OrganizationalDetails).Role;
+                                //string Imageurl = (node1.Data as OrganizationalDetails).Imageurl;
+                                            <div class="e-orgchart-template-div-style">
+                                                <div>
+                                                    <p class="e-orgchart-template-name-style">@Name</p>
+                                                </div>
+                                            </div>
+                            }
+                        </NodeTemplate>
+                    </DiagramTemplates>
+                </SfDiagramComponent>
+                
+            </Content>
+        </DialogTemplates>
+        @*<DialogEvents OnOpen="@DialogOpen" Closed="@DialogClose"></DialogEvents>*@
+        <DialogButtons>
+           @* <DialogButton IsPrimary="true" Content="<a id='newTab' href='https://www.syncfusion.com/company/about-us' target='_blank'>Learn More</a>" OnClick="@OnBtnClick" />*@
+                <DialogButton IsPrimary="true" Content="Close" OnClick="@OnBtnClick" />
+        </DialogButtons>
+    </SfDialog>
+    </div>
+</div>
+
+    @code {
+    #region Toasters
+    public static string ToastContent { get; set; }
+    SfToast ToastObj;
+    SfToast DeleteToastObj;
+    private string ToastPosition = "Right";
+    private int AlarmTimeout { get; set; } = 120000;
+    private List<ToastModel> Toast = new List<ToastModel>
+        {
+            new ToastModel{ Title = "Warning!", Content=ToastContent, CssClass="e-toast-warning", Icon="e-warning toast-icons" },
+            new ToastModel{ Title = "Success!", Content=ToastContent, CssClass="e-toast-success", Icon="e-success toast-icons" },
+            new ToastModel{ Title = "Error!", Content=ToastContent, CssClass="e-toast-danger", Icon="e-error toast-icons" },
+            new ToastModel{ Title = "Information!", Content=ToastContent, CssClass="e-toast-info", Icon="e-info toast-icons" }
+        };
+    #endregion Toasters
+    SfGrid<ADepartment>? DepartmentGrid;
+    private ADepartment? DepartmentReviewData{ get; set; }
+    public List<ADepartment> DepartmentData{ get; set; }
+    public List<ViewOrgStructureDepartment>OrgaStructureDepartmentData{ get; set; }
+
+    SfMultiSelect<int[], ADepartment> DepartmentObj;
+    bool Visibility { get; set; } = false;
+    string? ErrorMessage { get; set; } = null;
+    private DialogSettings DialogParams = new DialogSettings { Height="auto",MinHeight="50vh",Width="50%" };
+    private readonly JsonSerializerOptions _options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+
+    ScrollLimitMode scrollLimit { get; set; } = ScrollLimitMode.Diagram;
+    private bool samepoint = false;
+    private SubTreeAlignmentType subTreeAlignment = SubTreeAlignmentType.Right;
+    private int rows = 0;
+    private string pattern;
+    private double offset = 20;
+    private const string selecteditem = "image-pattern-style  e-selected-orientation-style";
+    private const string unselecteditem = "image-pattern-style";
+    private const string selectedPattenitem = "image-pattern-style  e-selected-pattern-style";
+    private Dictionary<string, string> dict = new Dictionary<string, string>() {
+        { "topToBottom", selecteditem },
+        { "bottomToTop", unselecteditem },
+        { "leftToRight", unselecteditem },
+        { "rightToLeft", unselecteditem }
+    };
+    public SfDiagramComponent Diagram;
+    public LayoutOrientation OrientationType = LayoutOrientation.TopToBottom;
+    private Syncfusion.Blazor.Diagram.Orientation subTreeOrientation = Syncfusion.Blazor.Diagram.Orientation.Vertical;
+    public int? HorizontalValue { get; set; } = 40;
+    public int? VerticalValue { get; set; } = 40;
+    public int? MaginXValue { get; set; } = 22;
+    public int? MaginYValue { get; set; } = 22;
+    public LayoutType Type = LayoutType.ComplexHierarchicalTree;
+    public Syncfusion.Blazor.Diagram.HorizontalAlignment HorizontalAlignment = Syncfusion.Blazor.Diagram.HorizontalAlignment.Left;
+    public Syncfusion.Blazor.Diagram.VerticalAlignment VerticalAlignment = Syncfusion.Blazor.Diagram.VerticalAlignment.Top;
+    public int HorizontalSpacing = 40;
+    public int VerticalSpacing = 40;
+    public double Top = 50;
+    public double Bottom = 0;
+    public double Right = 0;
+    public double Left = 10;
+    public int TopValue = 50;
+    public int LeftValue = 10;
+
+    // Defines default values for Node object
+    private void OnNodeCreating(IDiagramObject obj)
+    {
+        Node node = obj as Node;
+        node.Width = 150; node.Height = 100;
+        //Initialize shape
+        HierarchicalDetails hierarchicalDetails = node.Data as HierarchicalDetails;
+        node.Shape = new BasicShape() { Type =Syncfusion.Blazor.Diagram.NodeShapes.HTML, Shape = NodeBasicShapes.Rectangle, CornerRadius = 7 };
+        node.Style = new ShapeStyle() { Fill = hierarchicalDetails.FilllColor, StrokeWidth = 1, StrokeColor = hierarchicalDetails.Border };
+    }
+    // Defines default values for Connector object
+    private void OnConnectorCreating(IDiagramObject connector1)
+    {
+        Connector connector = (connector1 as Connector);
+        connector.Type = ConnectorSegmentType.Orthogonal;
+        connector.CornerRadius = 7;
+        connector.Style = new ShapeStyle()
+        {
+            StrokeColor= "#6d6d6d",
+        };
+        connector.TargetDecorator.Height = 7;
+        connector.TargetDecorator.Width = 7;
+    }
+    public List<HierarchicalDetails> DataSource = new List<HierarchicalDetails>();
+    private TreeInfo GetLayoutInfo(IDiagramObject obj, TreeInfo options)
+    {
+        if (rows == 0)
+        {
+            if (rows == 0 && options.Rows != null)
+                options.Rows = null;
+            Node node = obj as Node;
+            if (pattern == "LeftOrientationVertical50" || pattern == "RightOrientationVertical50")
+            {
+                options.Offset = -50;
+            }
+            if (!options.HasSubTree)
+            {
+                options.AlignmentType = subTreeAlignment;
+                options.Orientation = subTreeOrientation;
+                options.AlignmentType = subTreeAlignment;
+            }
+        }
+        else
+        {
+            if (!options.HasSubTree)
+            {
+                options.AlignmentType = subTreeAlignment;
+                options.Orientation = subTreeOrientation;
+                options.Offset = offset;
+            }
+        }
+        return options;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            await _SystemSettings.GetLoginCredentials();
+            if (string.IsNullOrEmpty(_SystemSettings.AccessToken))
+            {
+                Navigation.NavigateTo("/");
+            }
+            else
+            {
+                var tasks = new List<Task>();
+                tasks.Add(Task.Run(async () =>
+               {
+                   Http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _SystemSettings.AccessToken);
+                   var response = await Http.GetAsync($"{_ApiConfig.BaseUrl}Utilities/GetDepartment");
+                   var content = await response.Content.ReadAsStringAsync();
+                   if (response.IsSuccessStatusCode)
+                   {
+                       DepartmentData = JsonSerializer.Deserialize<List<ADepartment>>(content, _options);
+                       if(DepartmentData != null)
+                       {
+                           DataSource = new List<HierarchicalDetails>();
+                           foreach(var n in DepartmentData)
+                           {
+                               if (string.IsNullOrEmpty(n.ReportsTo))
+                               {
+                                   DataSource.Add(new HierarchicalDetails() { Id = n.DepartmentId.ToString(), Label = n.DepartmentDescription, FilllColor = "#e7704c", Border = "#c15433" });
+                               }
+                               else
+                               {
+                                   DataSource.Add(new HierarchicalDetails() { Id = n.DepartmentId.ToString(), Label = n.DepartmentDescription, ReportingPerson = n.ReportsTo.Split(",").ToList(), FilllColor = "#f3904a", Border = "#d3722e" });
+                               }
+                           }
+                       }
+                   }
+               }));
+                //tasks.Add(Task.Run(async () =>
+                //{
+                //    Http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _SystemSettings.AccessToken);
+                //    var response = await Http.GetAsync($"{_ApiConfig.BaseUrl}Utilities/GetOrgStructureDepartment");
+                //    var content = await response.Content.ReadAsStringAsync();
+                //    if (response.IsSuccessStatusCode)
+                //    {
+                //        OrgaStructureDepartmentData = JsonSerializer.Deserialize<List<ViewOrgStructureDepartment>>(content, _options);
+
+                //    }
+                //}));
+                Task t = Task.WhenAll(tasks);
+                await t;
+            }
+
+        }
+        catch(Exception ex)
+        {
+            ErrorMessage=$"Error: {ex.Message}";
+        }
+        await base.OnInitializedAsync();
+    }
+    private void OnBtnClick()
+    {
+        if (Visibility)
+        {
+            Visibility=false;
+        }
+        else
+        {
+            Visibility = true;
+        }
+    }
+
+    public class ADepartmentAdapter : DataAdaptor
+    {
+        HttpClient Http;
+        private readonly JsonSerializerOptions _options;
+        SystemSettings _SystemSettings;
+        ApiConfig _ApiConfig;
+        public IToastService toastService;
+        //private UserManagement _userManagement;
+        public ADepartmentAdapter(HttpClient _http, IToastService ts/*, UserManagement userManagement*/
+        ,SystemSettings systemSettings,ApiConfig apiConfig)
+        {
+            Http = _http;
+            _options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            _SystemSettings = systemSettings;
+            _ApiConfig = apiConfig;
+            //_userManagement = userManagement;
+            toastService = ts;
+        }
+
+        public override async Task<Object> ReadAsync(DataManagerRequest dataManagerRequest, string key = null)
+        {
+            var data = new List<ADepartment>();
+            try
+            {
+                await _SystemSettings.GetLoginCredentials();
+
+                Http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _SystemSettings.AccessToken);
+                var response = await Http.GetAsync($"{_ApiConfig.BaseUrl}Utilities/GetDepartment");
+                var content = await response.Content.ReadAsStringAsync();
+                if (response.IsSuccessStatusCode)
+                {
+                    data = JsonSerializer.Deserialize<List<ADepartment>>(content, _options);
+                }
+
+            }
+            catch (Exception ex)
+            {
+                toastService.ShowError(ex.Message.ToString());
+            }
+
+            IEnumerable GridData = data;
+            int _count = data.Count;
+            if (dataManagerRequest.Search != null && dataManagerRequest.Search.Count > 0)
+            {
+                // Searching
+                GridData = DataOperations.PerformSearching(GridData, dataManagerRequest.Search);
+            }
+            if (dataManagerRequest.Where != null && dataManagerRequest.Where.Count > 0)
+            {
+                // Filtering
+                GridData = DataOperations.PerformFiltering(GridData, dataManagerRequest.Where, dataManagerRequest.Where[0].Operator);
+            }
+            if (dataManagerRequest.Sorted?.Count > 0) // perform Sorting
+            {
+                GridData = DataOperations.PerformSorting(GridData, dataManagerRequest.Sorted);
+            }
+            if (dataManagerRequest.Skip != 0)
+            {
+                GridData = DataOperations.PerformSkip(GridData, dataManagerRequest.Skip); //Paging
+            }
+            if (dataManagerRequest.Take != 0)
+            {
+                GridData = DataOperations.PerformTake(GridData, dataManagerRequest.Take);
+            }
+            IDictionary<string, object> aggregates = new Dictionary<string, object>();
+            if (dataManagerRequest.Aggregates != null) // Aggregation
+            {
+                aggregates = DataUtil.PerformAggregation(GridData, dataManagerRequest.Aggregates);
+            }
+            if (dataManagerRequest.Group != null && dataManagerRequest.Group.Any()) //Grouping
+            {
+                foreach (var group in dataManagerRequest.Group)
+                {
+                    GridData = DataUtil.Group<ADepartment>(GridData, group, dataManagerRequest.Aggregates, 0, dataManagerRequest.GroupByFormatter);
+                }
+            }
+            return dataManagerRequest.RequiresCounts ? new DataResult() { Result = GridData, Count = _count, Aggregates = aggregates } : (object)GridData;
+        }
+        public override async Task<Object> InsertAsync(DataManager dataManager, object value, string key)
+        {
+            try
+            {
+                await _SystemSettings.GetLoginCredentials();
+                var val = (value as ADepartment);
+                if(val != null)
+                {
+                    if (val.DepartmentId == 0)
+                    {
+                        Http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _SystemSettings.AccessToken);
+                        string json = Newtonsoft.Json.JsonConvert.SerializeObject(val);
+                        StringContent httpContent = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+
+                        var result = await Http.PostAsync($"{_ApiConfig.BaseUrl}Utilities/PostDepartment", httpContent);
+                        if (result.IsSuccessStatusCode)
+                        {
+                            var content = await result.Content.ReadAsStringAsync();
+                            var data = JsonSerializer.Deserialize<Response>(content, _options);
+                            if(data != null)
+                            {
+                                if (data.IsSuccess)
+                                {
+                                    toastService.ShowSuccess(data.Message);
+                                }
+                                else
+                                {
+                                    toastService.ShowError(data.Message);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            toastService.ShowError(result.ReasonPhrase);
+                        }
+
+                    }
+                    else
+                    {
+                        Http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _SystemSettings.AccessToken);
+                        string json = Newtonsoft.Json.JsonConvert.SerializeObject(val);
+                        StringContent httpContent = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+
+                        var result = await Http.PutAsync($"{_ApiConfig.BaseUrl}Utilities/PutDepartment", httpContent);
+                        if (result.IsSuccessStatusCode)
+                        {
+                            var content = await result.Content.ReadAsStringAsync();
+                            var data = JsonSerializer.Deserialize<Response>(content, _options);
+                            if(data != null)
+                            {
+                                if (data.IsSuccess)
+                                {
+                                    toastService.ShowSuccess(data.Message);
+                                }
+                                else
+                                {
+                                    toastService.ShowError(data.Message);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            toastService.ShowError(result.ReasonPhrase);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                toastService.ShowError(ex.Message.ToString());
+            }
+            return value;
+        }
+        public override async Task<object> RemoveAsync(DataManager dataManager, object value, string keyField, string key)
+        {
+            //try
+            //{
+            //    int data = (int)value;
+            //    using (var dbContext = new MUCOBADIContext())
+            //    {
+            //        var exists = dbContext.AAdministrationPhase.FirstOrDefault(o => o.AdministrationPhaseId == data);
+            //        if (exists != null)
+            //        {
+            //            dbContext.AAdministrationPhase.Remove(exists);
+            //        }
+            //        await dbContext.SaveChangesAsync();
+            //    }
+            //}
+            //catch (Exception ex)
+            //{
+            //    toastService.ShowError(ex.Message.ToString());
+            //}
+
+
+            return value;
+        }
+        public override async Task<object> UpdateAsync(DataManager dataManager, object value, string keyField, string key)
+        {
+            try
+            {
+                await _SystemSettings.GetLoginCredentials();
+                var val = (value as ADepartment);
+                if(val != null)
+                {
+                    if (val.DepartmentId == 0)
+                    {
+                        Http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _SystemSettings.AccessToken);
+                        string json = Newtonsoft.Json.JsonConvert.SerializeObject(val);
+                        StringContent httpContent = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+
+                        var result = await Http.PostAsync($"{_ApiConfig.BaseUrl}Utilities/PostDepartment", httpContent);
+                        if (result.IsSuccessStatusCode)
+                        {
+                            var content = await result.Content.ReadAsStringAsync();
+                            var data = JsonSerializer.Deserialize<Response>(content, _options);
+                            if(data != null)
+                            {
+                                if (data.IsSuccess)
+                                {
+                                    toastService.ShowSuccess(data.Message);
+                                }
+                                else
+                                {
+                                    toastService.ShowError(data.Message);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            toastService.ShowError(result.ReasonPhrase);
+                        }
+
+                    }
+                    else
+                    {
+                        Http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _SystemSettings.AccessToken);
+                        string json = Newtonsoft.Json.JsonConvert.SerializeObject(val);
+                        StringContent httpContent = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+
+                        var result = await Http.PutAsync($"{_ApiConfig.BaseUrl}Utilities/PutDepartment", httpContent);
+                        if (result.IsSuccessStatusCode)
+                        {
+                            var content = await result.Content.ReadAsStringAsync();
+                            var data = JsonSerializer.Deserialize<Response>(content, _options);
+                            if(data != null)
+                            {
+                                if (data.IsSuccess)
+                                {
+                                    toastService.ShowSuccess(data.Message);
+                                }
+                                else
+                                {
+                                    toastService.ShowError(data.Message);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            toastService.ShowError(result.ReasonPhrase);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                toastService.ShowError(ex.Message.ToString());
+            }
+
+            return value;
+        }
+        public override async Task<object> BatchUpdateAsync(DataManager dm, object Changed, object Added, object Deleted, string KeyField, string Key, int? dropIndex)
+        {
+            object? products = null;
+            try
+            {
+                await _SystemSettings.GetLoginCredentials();
+                if (Changed != null)
+                {
+                    products = Changed;
+                    foreach (var val in (List<ADepartment>)Changed)
+                    {
+                        if(val != null)
+                        {
+                            if (val.DepartmentId == 0)
+                            {
+                                Http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _SystemSettings.AccessToken);
+                                string json = Newtonsoft.Json.JsonConvert.SerializeObject(val);
+                                StringContent httpContent = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+
+                                var result = await Http.PostAsync($"{_ApiConfig.BaseUrl}Utilities/PostDepartment", httpContent);
+                                if (result.IsSuccessStatusCode)
+                                {
+                                    var content = await result.Content.ReadAsStringAsync();
+                                    var data = JsonSerializer.Deserialize<Response>(content, _options);
+                                    if(data != null)
+                                    {
+                                        if (data.IsSuccess)
+                                        {
+                                            toastService.ShowSuccess(data.Message);
+                                        }
+                                        else
+                                        {
+                                            toastService.ShowError(data.Message);
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    toastService.ShowError(result.ReasonPhrase);
+                                }
+
+                            }
+                            else
+                            {
+                                Http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _SystemSettings.AccessToken);
+                                string json = Newtonsoft.Json.JsonConvert.SerializeObject(val);
+                                StringContent httpContent = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+
+                                var result = await Http.PutAsync($"{_ApiConfig.BaseUrl}Utilities/PutDepartment", httpContent);
+                                if (result.IsSuccessStatusCode)
+                                {
+                                    var content = await result.Content.ReadAsStringAsync();
+                                    var data = JsonSerializer.Deserialize<Response>(content, _options);
+                                    if(data != null)
+                                    {
+                                        if (data.IsSuccess)
+                                        {
+                                            toastService.ShowSuccess(data.Message);
+                                        }
+                                        else
+                                        {
+                                            toastService.ShowError(data.Message);
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    toastService.ShowError(result.ReasonPhrase);
+                                }
+                            }
+                        }
+                    }
+
+                }
+                if (Added != null)
+                {
+                    products = Added;
+                    foreach (var val in (List<ADepartment>)Added)
+                    {
+                        if(val != null)
+                        {
+                            if (val.DepartmentId == 0)
+                            {
+                                Http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _SystemSettings.AccessToken);
+                                string json = Newtonsoft.Json.JsonConvert.SerializeObject(val);
+                                StringContent httpContent = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+
+                                var result = await Http.PostAsync($"{_ApiConfig.BaseUrl}Utilities/PostDepartment", httpContent);
+                                if (result.IsSuccessStatusCode)
+                                {
+                                    var content = await result.Content.ReadAsStringAsync();
+                                    var data = JsonSerializer.Deserialize<Response>(content, _options);
+                                    if(data != null)
+                                    {
+                                        if (data.IsSuccess)
+                                        {
+                                            toastService.ShowSuccess(data.Message);
+                                        }
+                                        else
+                                        {
+                                            toastService.ShowError(data.Message);
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    toastService.ShowError(result.ReasonPhrase);
+                                }
+
+                            }
+                            else
+                            {
+                                Http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _SystemSettings.AccessToken);
+                                string json = Newtonsoft.Json.JsonConvert.SerializeObject(val);
+                                StringContent httpContent = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+
+                                var result = await Http.PutAsync($"{_ApiConfig.BaseUrl}Utilities/PutDepartment", httpContent);
+                                if (result.IsSuccessStatusCode)
+                                {
+                                    var content = await result.Content.ReadAsStringAsync();
+                                    var data = JsonSerializer.Deserialize<Response>(content, _options);
+                                    if(data != null)
+                                    {
+                                        if (data.IsSuccess)
+                                        {
+                                            toastService.ShowSuccess(data.Message);
+                                        }
+                                        else
+                                        {
+                                            toastService.ShowError(data.Message);
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    toastService.ShowError(result.ReasonPhrase);
+                                }
+                            }
+                        }
+                    }
+
+                }
+                if (Deleted != null)
+                {
+                    products = Deleted;
+                    //foreach (var rec in (List<OrderDetails>)Deleted)
+                    //{
+                    //    Orders.Remove(Orders.Where(or => or.OrderID == rec.OrderID).FirstOrDefault());
+                    //}
+
+                }
+            }
+            catch (Exception ex)
+            {
+                toastService.ShowError(ex.Message.ToString());
+            }
+            return products;
+        }
+    }
+    public async Task OnDepartmentActionComplete(ActionEventArgs<ADepartment> args)
+    {
+        try
+        {
+            if (args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Add) || args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.BeginEdit))
+        {
+            DepartmentGrid.PreventRender(false);
+        }
+        else if (args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Save))
+        {
+             var tasks = new List<Task>();
+                tasks.Add(Task.Run(async () =>
+               {
+                   Http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _SystemSettings.AccessToken);
+                   var response = await Http.GetAsync($"{_ApiConfig.BaseUrl}Utilities/GetDepartment");
+                   var content = await response.Content.ReadAsStringAsync();
+                   if (response.IsSuccessStatusCode)
+                   {
+                       DepartmentData = JsonSerializer.Deserialize<List<ADepartment>>(content, _options);
+                       if(DepartmentData != null)
+                       {
+                           DataSource = new List<HierarchicalDetails>();
+                           foreach(var n in DepartmentData)
+                           {
+                               if (string.IsNullOrEmpty(n.ReportsTo))
+                               {
+                                   DataSource.Add(new HierarchicalDetails() { Id = n.DepartmentId.ToString(), Label = n.DepartmentDescription, FilllColor = "#e7704c", Border = "#c15433" });
+                               }
+                               else
+                               {
+                                   DataSource.Add(new HierarchicalDetails() { Id = n.DepartmentId.ToString(), Label = n.DepartmentDescription, ReportingPerson = n.ReportsTo.Split(",").ToList(), FilllColor = "#f3904a", Border = "#d3722e" });
+                               }
+                           }
+                        }
+                   }
+               }));
+               //tasks.Add(Task.Run(async () =>
+               //{
+               //    Http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _SystemSettings.AccessToken);
+               //    var response = await Http.GetAsync($"{_ApiConfig.BaseUrl}Utilities/GetOrgStructureDepartment");
+               //    var content = await response.Content.ReadAsStringAsync();
+               //    if (response.IsSuccessStatusCode)
+               //    {
+               //        OrgaStructureDepartmentData = JsonSerializer.Deserialize<List<ViewOrgStructureDepartment>>(content, _options);
+               //    }
+               //}));
+
+                Task t = Task.WhenAll(tasks);
+                await t;
+        }
+        }
+        catch(Exception ex)
+        {
+             await ToastObj.ShowAsync(new ToastModel { Title = "Error!", Content = ex.Message.ToString(), CssClass = "e-toast-danger", Icon = "e-error toast-icons" });
+        }
+        
+    }
+    public string GetDepartmentHeader(ADepartment Value)
+    {
+        if (Value.DepartmentId == 0)
+        {
+            return "Add a New Department";
+        }
+        else
+        {
+            return "Edit Details for " + Value.DepartmentDescription;
+        }
+    }
+    private void OnDepartmentBound(Syncfusion.Blazor.DropDowns.DataBoundEventArgs args)
+    {
+        if (!string.IsNullOrEmpty(DepartmentReviewData.ReportsTo))
+        {
+            var a = DepartmentReviewData.ReportsTo.Split(',');
+            List<int> c = new List<int>();
+            foreach (var n in a)
+            {
+                int b = Convert.ToInt32(n.Trim());
+                c.Add(b);
+            }
+            DepartmentObj.Value = c.ToArray();
+        }
+    }
+    private void OnDepartmentChange(Syncfusion.Blazor.DropDowns.MultiSelectChangeEventArgs<int[]> args)
+    {
+        if(args.Value != null)
+        {
+            DepartmentReviewData.ReportsTo = string.Join(",", args.Value);
+        }
+        
+    }
+}
+

@@ -1,0 +1,39 @@
+﻿@page "/OrganisationStructurePage"
+<ol class="breadcrumb" style="margin-top:5px;">
+   <li class="breadcrumb-item active" style="width: 100%; background-color: bisque; color: brown; font-family: Cambria; padding: 10px; font: bolder;"> <strong> Organisation Structure </strong></li>
+</ol>
+<style>
+    h3{
+        color:ghostwhite;
+        background-color:darkslategray;
+        padding:10px;
+        width:100%;
+    }
+</style>
+<SfTab HeaderPlacement="HeaderPosition.Top"> 
+    <TabItems>
+         <TabItem>
+                    <ChildContent>
+                        <TabHeader Text="Departments"></TabHeader>
+                    </ChildContent>
+                     <ContentTemplate>
+                         <div style="margin:10px; width:100%;">
+                             <ADepartmentPage/>
+                         </div>
+                     </ContentTemplate>
+                </TabItem>
+                 <TabItem>
+                    <ChildContent>
+                        <TabHeader Text="Job Titles"></TabHeader>
+                    </ChildContent>
+                     <ContentTemplate>
+                         <div style="margin:10px; width:100%;">
+                             <JobTitlePage/>
+                         </div>
+                     </ContentTemplate>
+                </TabItem>
+    </TabItems>
+</SfTab>
+@code {
+
+}

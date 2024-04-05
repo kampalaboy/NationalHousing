@@ -1,0 +1,145 @@
+﻿@page "/cpd"
+@using System.Net.Http
+@using System.Net.Http.Json
+@using System.Threading.Tasks
+@inject HttpClient Http
+@using Syncfusion.Blazor.Grids
+@using Syncfusion.Blazor.Popups
+@using HCMIS.DTOs.Training
+
+<div class="row">
+    <div class="col-lg-12 col-md-12">
+        <button class="btn btn-primary" @onclick="OnClick">
+           Add New
+        </button>
+    </div>
+</div>
+<br />
+@if (cpdEntities == null)
+{
+    <p>No records found.</p>
+}
+else
+{
+    <SfGrid 
+        @ref="Grid"
+        DataSource="@cpdEntities" 
+        AllowPaging="true" 
+        AllowTextWrap="true">
+    <GridEvents 
+        CommandClicked="OnCommandClicked"
+        TValue="ViewCpdDto">
+    </GridEvents>
+    <GridPageSettings PageSize="15"></GridPageSettings>
+    <GridEditSettings 
+        AllowAdding="true" 
+        AllowEditing="true" 
+        AllowDeleting="true" 
+        Mode="EditMode.Dialog">
+    </GridEditSettings>
+       <GridColumns>
+         <GridColumn Field=@nameof(ViewCpdDto.Id) Visible=false HeaderText="Id" TextAlign="TextAlign.Right" Width="120"></GridColumn>
+         <GridColumn Field=@nameof(ViewCpdDto.Module) HeaderText="Module" Width="150"></GridColumn>
+         <GridColumn Field=@nameof(ViewCpdDto.StartDate) HeaderText="Start Date" Format="d" Type="ColumnType.Date" TextAlign="TextAlign.Right" Width="130"></GridColumn>
+         <GridColumn Field=@nameof(ViewCpdDto.EndDate) HeaderText="End Date"  Format="d" Type="ColumnType.Date" Width="120"></GridColumn>
+         <GridColumn Field=@nameof(ViewCpdDto.Location) HeaderText="Location" Width="150"></GridColumn>
+         <GridColumn Field=@nameof(ViewCpdDto.Departments) HeaderText="Departments" TextAlign="TextAlign.Right" Width="130"></GridColumn>
+         <GridColumn Field=@nameof(ViewCpdDto.Officers) HeaderText="Officers" TextAlign="TextAlign.Right" Width="120"></GridColumn>
+         <GridColumn Field=@nameof(ViewCpdDto.Amount) HeaderText="Amount" Format="C2" TextAlign="TextAlign.Right" Width="130"></GridColumn>
+         <GridColumn Field=@nameof(ViewCpdDto.Trainer) HeaderText="Trainer" TextAlign="TextAlign.Right" Width="120"></GridColumn>
+         <GridColumn HeaderText="Manage Records" Width="150">
+            <GridCommandColumns>
+                <GridCommandColumn 
+                    ButtonOption="@(new CommandButtonOptions() 
+                    { Content = "Edit", CssClass = "e-flat" })">
+                </GridCommandColumn>
+            </GridCommandColumns>
+        </GridColumn>
+     </GridColumns>
+    </SfGrid>
+}
+
+<SfDialog Width="50%" ShowCloseIcon="true" IsModal="true" @bind-Visible="@IsVisible">
+    <DialogTemplates>
+        <Header> Continuous Professional Development Training Dialog </Header>
+        <Content> 
+            <CpdDialog 
+                @bind-updatedEntity="Entity" 
+                id="@id" /> 
+        </Content>
+    </DialogTemplates>
+</SfDialog>
+
+@code {
+    SfGrid<ViewCpdDto> Grid { get; set; }
+
+    private ViewCpdDto? _entity;
+    private List<ViewCpdDto> cpdEntities = new List<ViewCpdDto>();
+    private bool IsVisible { get; set; } = false; 
+
+    public int id { get; set; }
+    public ViewCpdDto? Entity
+    {
+        get => _entity;
+        set
+        {
+            if (value != null)
+            {
+                var obj = cpdEntities
+                    .FirstOrDefault(x => x.Id.Equals(value.Id));
+
+                if (obj != null)
+                {
+                    obj.Amount = value.Amount;
+                    obj.Departments = value.Departments;
+                    obj.EndDate = value.EndDate;
+                    obj.Location = value.Location;
+                    obj.Module = value.Module;
+                    obj.Officers = value.Officers;
+                    obj.StartDate = value.StartDate;
+                    obj.Trainer = value.Trainer;
+
+                    this.IsVisible = false;
+                    Grid.Refresh();
+                    _entity = null;
+                }
+                else
+                {
+                    cpdEntities.Add(new ViewCpdDto
+                        {
+                            Id = value.Id,
+                            Amount = value.Amount,
+                            StartDate = value.StartDate,
+                            EndDate = value.EndDate,
+                            Departments = value.Departments,
+                            Location = value.Location,
+                            Module = value.Module,
+                            Officers = value.Officers,
+                            Trainer = value.Trainer
+                        });
+                    this.IsVisible = false;
+                    Grid.Refresh();
+                    _entity = null;
+                }
+            }
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+            cpdEntities = await Http
+            .GetFromJsonAsync<List<ViewCpdDto>>("cpd");
+    }
+
+    public void OnCommandClicked(CommandClickEventArgs<ViewCpdDto> args)
+    {
+        id = args.RowData.Id;
+        this.IsVisible = true;
+    }
+    
+    private async Task OnClick()
+    {
+        id = 0;
+        this.IsVisible = true;
+    }
+}

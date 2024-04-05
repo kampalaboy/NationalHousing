@@ -1,0 +1,312 @@
+﻿@page "/ExternalRegistrationPage"
+@using HCMIS.Model
+@using HCMIS.ViewModel
+@using System.Text.Json
+@using System.Text.RegularExpressions
+@inject ApiConfig _ApiConfig;
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+@*<h3>ExternalRegistrationPage</h3>*@
+<style>
+    h3{
+        color:ghostwhite;
+        background-color:darkslategray;
+        padding:10px;
+        width:100%;
+    }
+</style>
+
+<article class="content px-4">
+    <ol class="breadcrumb" style="margin-top:5px;">
+        <li class="breadcrumb-item active" style="width: 100%; background-color: bisque; color: brown; font-family: Cambria; padding: 10px; font: bolder;"> <strong> Accout Registration </strong></li>
+    </ol>
+    <EditForm Model="@inputmodel"  OnValidSubmit="@Register" class="row" style="width:95vw; margin-bottom:20px;">
+   
+                    <div class="col-md-12">
+                       <h3>Personal Information</h3>
+                   </div>
+                   <div class="col-md-4">
+                       <p>First Name <span style="color:red;">(*)</span></p>
+                       <SfTextBox Type="InputType.Text" @bind-Value="@inputmodel.NewNonStaff.FirstName" CssClass="form-control" Placeholder="Please enter Name" FloatLabelType="FloatLabelType.Never"></SfTextBox>
+                       <p> <ValidationMessage For="@(() => inputmodel.NewNonStaff.FirstName)" /></p>
+                   </div>
+                    <div class="col-md-4">
+                        <p>Middle Name</p>
+                       <SfTextBox Type="InputType.Text" @bind-Value="@inputmodel.NewNonStaff.MiddleName" CssClass="form-control" Placeholder="Please enter Name" FloatLabelType="FloatLabelType.Never"></SfTextBox>
+                       <p> <ValidationMessage For="@(() => inputmodel.NewNonStaff.MiddleName)" /></p>
+                   </div>
+                    <div class="col-md-4">
+                        <p>Last Name <span style="color:red;">(*)</span></p>
+                       <SfTextBox Type="InputType.Text" @bind-Value="@inputmodel.NewNonStaff.LastName" CssClass="form-control" Placeholder="Please enter Name" FloatLabelType="FloatLabelType.Never"></SfTextBox>
+                       <p> <ValidationMessage For="@(() => inputmodel.NewNonStaff.LastName)" /></p>
+                   </div>
+                   <div class="col-md-4">
+                       <p>Gender <span style="color:red;">(*)</span></p>
+                        <SfDropDownList @bind-Value="@(inputmodel.NewNonStaff.GenderId)" Enabled="true" TItem="AGender" TValue="int?" DataSource="@GenderData" Placeholder="Please select" FloatLabelType="FloatLabelType.Never" AllowFiltering="true" FilterType="Syncfusion.Blazor.DropDowns.FilterType.Contains">
+                            <DropDownListFieldSettings Value="@nameof(AGender.GenderId)" Text="@nameof(AGender.GenderDesc)"></DropDownListFieldSettings>
+                        </SfDropDownList>
+                        <p> <ValidationMessage For="@(() => inputmodel.NewNonStaff.GenderId)" /></p>
+                   </div>
+                   <div class="col-md-4">
+                       <p>Date of Birth <span style="color:red;">(*)</span></p>
+                        <SfDatePicker @bind-Value="@(inputmodel.NewNonStaff.DoB)" Placeholder="Select Date" Format="dd/MM/yyyy" FloatLabelType="FloatLabelType.Never"></SfDatePicker>
+                        <p> <ValidationMessage For="@(() => inputmodel.NewNonStaff.DoB)" /></p>
+                   </div>
+                    <div class="col-md-4">
+                        <p>Nationality <span style="color:red;">(*)</span></p>
+                        <SfDropDownList @bind-Value="@(inputmodel.NewNonStaff.CoutryId)" Enabled="true" TItem="ACountry" TValue="int?" DataSource="@CountryData" Placeholder="Please select" FloatLabelType="FloatLabelType.Never" AllowFiltering="true" FilterType="Syncfusion.Blazor.DropDowns.FilterType.Contains">
+                            <DropDownListFieldSettings Value="@nameof(ACountry.CoutryId)" Text="@nameof(ACountry.CountryDesc)"></DropDownListFieldSettings>
+                        </SfDropDownList>
+                        <p> <ValidationMessage For="@(() => inputmodel.NewNonStaff.GenderId)" /></p>
+                   </div>
+                    <div class="col-md-4">
+                        <p>Official Email Address <span style="color:red;">(*)</span></p>
+                       <SfTextBox Type="InputType.Text" @bind-Value="@inputmodel.NewNonStaff.EmailAddress" CssClass="form-control" Placeholder="Please enter email" FloatLabelType="FloatLabelType.Never"></SfTextBox>
+                       <p> <ValidationMessage For="@(() => inputmodel.NewNonStaff.EmailAddress)" /></p>
+                   </div>
+                   <div class="col-md-4">
+                       <p style="margin-bottom:29px;">Identification Type <span style="color:red;">(*)</span></p>
+                        <SfDropDownList @bind-Value="@(inputmodel.NewNonStaff.IdentificationTypeId)" Enabled="true" TItem="AIdentificationType" TValue="int?" DataSource="@IdentificationTypeData" Placeholder="Please select" FloatLabelType="FloatLabelType.Never" AllowFiltering="true" FilterType="Syncfusion.Blazor.DropDowns.FilterType.Contains">
+                            <DropDownListFieldSettings Value="@nameof(AIdentificationType.IdentificationTypeId)" Text="@nameof(AIdentificationType.IdentificationTypeDesc)"></DropDownListFieldSettings>
+                        </SfDropDownList>
+                        <p> <ValidationMessage For="@(() => inputmodel.NewNonStaff.IdentificationTypeId)" /></p>
+                   </div>
+                   <div class="col-md-4">
+                        <p>Identification Number <span style="color:red;">(*)</span></p>
+                       <SfTextBox Type="InputType.Text" @bind-Value="@inputmodel.NewNonStaff.IdentificationNumber" CssClass="form-control" Placeholder="Please enter Nin/Passport/Driving permit No" FloatLabelType="FloatLabelType.Never"></SfTextBox>
+                       <p> <ValidationMessage For="@(() => inputmodel.NewNonStaff.IdentificationNumber)" /></p>
+                   </div>
+                   <div class="col-md-4">
+                        <p>Official Phone Number <span style="color:red;">(*)</span></p>
+                       <SfNumericTextBox Format="N0"  @bind-Value="@inputmodel.NewNonStaff.OfficialPhoneNumber" CssClass="form-control" Placeholder="Please enter Phone Number" FloatLabelType="FloatLabelType.Never"></SfNumericTextBox>
+                       <p> <ValidationMessage For="@(() => inputmodel.NewNonStaff.OfficialPhoneNumber)" /></p>
+                   </div>
+                   <div class="col-md-4">
+                        <p>Mobile Number</p>
+                       <SfNumericTextBox Format="N0"  @bind-Value="@inputmodel.NewNonStaff.MobileNumber" CssClass="form-control" Placeholder="Please enter Phone Number" FloatLabelType="FloatLabelType.Never"></SfNumericTextBox>
+                       <p> <ValidationMessage For="@(() => inputmodel.NewNonStaff.MobileNumber)" /></p>
+                   </div>
+                   <div class="col-md-4">
+                        <p>Other Number</p>
+                       <SfNumericTextBox Format="N0"  @bind-Value="@inputmodel.NewNonStaff.OfficePhoneNumber" CssClass="form-control" Placeholder="Please enter Phone Number" FloatLabelType="FloatLabelType.Never"></SfNumericTextBox>
+                       <p> <ValidationMessage For="@(() => inputmodel.NewNonStaff.OfficePhoneNumber)" /></p>
+                   </div>
+                   <div class="col-md-12">
+                       <h3>Social Media Handles</h3>
+                   </div>
+                   <div class="col-md-4">
+                        <p>LinkedIn</p>
+                       <SfTextBox Type="InputType.Text" @bind-Value="@inputmodel.NewNonStaff.LinkedIn" CssClass="form-control" Placeholder="Please enter Profile URL" FloatLabelType="FloatLabelType.Never"></SfTextBox>
+                       <p> <ValidationMessage For="@(() => inputmodel.NewNonStaff.LinkedIn)" /></p>
+                   </div>
+                   <div class="col-md-4">
+                        <p>Twitter</p>
+                       <SfTextBox Type="InputType.Text" @bind-Value="@inputmodel.NewNonStaff.Twitter" CssClass="form-control" Placeholder="Please enter Profile URL" FloatLabelType="FloatLabelType.Never"></SfTextBox>
+                       <p> <ValidationMessage For="@(() => inputmodel.NewNonStaff.Twitter)" /></p>
+                   </div>
+                   <div class="col-md-4">
+                        <p>Github</p>
+                       <SfTextBox Type="InputType.Text" @bind-Value="@inputmodel.NewNonStaff.Github" CssClass="form-control" Placeholder="Please enter Profile URL" FloatLabelType="FloatLabelType.Never"></SfTextBox>
+                       <p> <ValidationMessage For="@(() => inputmodel.NewNonStaff.Github)" /></p>
+                   </div>
+                   <div class="col-md-12">
+                       <h3>Account Credentials</h3>
+                   </div>
+                    <div class="col-md-4">
+                        <p>Username</p>
+                       <SfTextBox Type="InputType.Text" @bind-Value="@inputmodel.UserName" CssClass="form-control" Placeholder="Please enter Username" FloatLabelType="FloatLabelType.Never"></SfTextBox>
+                       <p> <ValidationMessage For="@(() => inputmodel.UserName)" /></p>
+                   </div>
+                   <div class="col-md-4">
+                        <p>Password</p>
+                       <SfTextBox Type="InputType.Password" @bind-Value="@inputmodel.Password" CssClass="form-control" Placeholder="Please enter Password" FloatLabelType="FloatLabelType.Never"></SfTextBox>
+                       <p> <ValidationMessage For="@(() => inputmodel.Password)" /></p>
+                   </div>
+                   <div class="col-md-4">
+                        <p>Re-Enter Password</p>
+                       <SfTextBox Type="InputType.Password" @bind-Value="@inputmodel.Repassword" CssClass="form-control" Placeholder="Please re-enter password" FloatLabelType="FloatLabelType.Never"></SfTextBox>
+                       <p> <ValidationMessage For="@(() => inputmodel.Repassword)" /></p>
+                   </div>
+                   <div class="col-md-12">
+                        <button class="btn btn-success" style="margin-top:10px; margin-bottom:10px; float:right;">
+                            <span class="button__text">Register User
+                            <i class="fa-chevron-right"></i></span>
+                        </button>
+                   </div>
+                   <div class="col-md-12">
+                       <SfSpinner Visible=false @ref="@SavingSpinner" Label="Registering User Please wait..."></SfSpinner>
+                   </div>
+                    <div class="col-md-12">
+                        <p class="alert-danger">
+                             <DataAnnotationsValidator />
+                            <ValidationSummary />
+                        </p>
+                        @if (!string.IsNullOrEmpty(RegisterError))
+                        {
+                             <p class="alert-danger" style="padding:10px;">
+                                 @RegisterError
+                            </p>
+                        }
+            @if(missingfields != null && missingfields.Count > 0)
+            {
+                <p class="alert-danger" style="padding:10px;">
+                                 <ul>
+                        @foreach(var a in missingfields)
+                        {
+                            <li>@a</li>
+                        }
+                    </ul>
+                 </p>
+            }
+             @if (!string.IsNullOrEmpty(RegisterSuccess))
+                        {
+                             <p class="alert-success"  style="padding:10px;">
+                                 @RegisterSuccess
+                            </p>
+                        }
+        </div>
+    </EditForm>
+</article>
+@code {
+    SfSpinner SavingSpinner;
+    private readonly JsonSerializerOptions _options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+    NonStaffRegistrationModel inputmodel { get; set; } = new NonStaffRegistrationModel();
+    string? RegisterError { get; set; }
+    string? RegisterSuccess { get; set; }
+    List<AGender>? GenderData{ get; set; }
+    List<ACountry>? CountryData{ get; set; }
+    List<AIdentificationType>? IdentificationTypeData{ get; set; }
+    List<string>? missingfields{ get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            inputmodel = new();
+            inputmodel.NewNonStaff = new();
+            //Http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _SystemSettings.AccessToken);
+            var response = await Http.GetAsync($"{_ApiConfig.BaseUrl}NonStaff/GetRegistrationPrimartData");
+            var content = await response.Content.ReadAsStringAsync();
+            if (response.IsSuccessStatusCode)
+            {
+                var _ExternalRegistrationModel = JsonSerializer.Deserialize<ExternalRegistrationModel>(content, _options);
+
+                if(_ExternalRegistrationModel != null)
+                {
+                    GenderData = _ExternalRegistrationModel.Gender;
+                    CountryData = _ExternalRegistrationModel.Coutry.OrderBy(o=> o.CountryDesc).ToList();
+                    IdentificationTypeData = _ExternalRegistrationModel.IdentificationType;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            RegisterError = $"Error: {ex.Message}";
+        }
+        await base.OnInitializedAsync();
+    }
+    private async Task Register()
+    {
+        try
+        {
+            await SavingSpinner.ShowAsync();
+            missingfields = new();
+            RegisterError = null;
+            RegisterSuccess= null;
+            if (string.IsNullOrEmpty(inputmodel.NewNonStaff.FirstName))
+            {
+                missingfields.Add("First Name is required");
+            }
+            if (string.IsNullOrEmpty(inputmodel.NewNonStaff.LastName))
+            {
+                missingfields.Add("Last Name is required");
+            }
+            if (inputmodel.NewNonStaff.GenderId== null)
+            {
+                missingfields.Add("Gender is required");
+            }
+            if (inputmodel.NewNonStaff.DoB== null)
+            {
+                missingfields.Add("Date of Birth is required");
+            }
+            if (inputmodel.NewNonStaff.IdentificationTypeId== null)
+            {
+                missingfields.Add("Identification Type is required");
+            }
+            if (string.IsNullOrEmpty(inputmodel.NewNonStaff.IdentificationNumber))
+            {
+                missingfields.Add("Identification Number is required");
+            }
+            if (string.IsNullOrEmpty(inputmodel.NewNonStaff.EmailAddress))
+            {
+                missingfields.Add("Email Address is required");
+            }
+            if (inputmodel.NewNonStaff.OfficialPhoneNumber== null)
+            {
+                missingfields.Add("Official Phone Number is required");
+            }
+            if (inputmodel.NewNonStaff.CoutryId== null)
+            {
+                missingfields.Add("Nationality is required");
+            }
+            else
+            {
+                if(inputmodel.Password != inputmodel.Repassword)
+                {
+                    missingfields.Add("Password mismatch, Please ensure that the password and re-entered password are the same");
+                }
+                else
+                {
+                    var hasNumber = new Regex(@"[0-9]+");
+                    var hasUpperChar = new Regex(@"[A-Z]+");
+                    var hasMinimum8Chars = new Regex(@".{8,}");
+                    var hasLowerChar = new Regex(@"[a-z]+");
+                    var hasSymbols = new Regex(@"[!@#$%^&*()_+=\[{\]};:<>|./?,-]");
+                    var isValidated = hasNumber.IsMatch(inputmodel.Password) && hasUpperChar.IsMatch(inputmodel.Password) && hasMinimum8Chars.IsMatch(inputmodel.Password) && hasLowerChar.IsMatch(inputmodel.Password) && hasSymbols.IsMatch(inputmodel.Password);
+                    if (isValidated)
+                    {
+                        inputmodel.ComfirmationUrl = $"{Navigation.BaseUri}AccountConfirmationPage";
+                        string json = Newtonsoft.Json.JsonConvert.SerializeObject(inputmodel);
+                        StringContent httpContent = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+                        var result = await Http.PostAsync($"{_ApiConfig.BaseUrl}NonStaff/Register", httpContent);
+                        if (result.IsSuccessStatusCode)
+                        {
+                            var content = await result.Content.ReadAsStringAsync();
+                            var data = JsonSerializer.Deserialize<Response>(content, _options);
+                            if(data != null)
+                            {
+                                if (data.IsSuccess)
+                                {
+                                    RegisterSuccess = $"Success: {data.Message}";
+                                }
+                                else
+                                {
+                                     RegisterError = $"Error: {data.Message}";
+                                }
+                            }
+
+                            ///RegisterSuccess
+                        }
+                        else
+                        {
+                             RegisterError = $"Error: {result.ReasonPhrase}";
+                        }
+                    }
+                    else
+                    {
+                        missingfields.Add("The password should contain atleast one upper case, one lower case, a special character, one numeric number and should also be atleast 8 characters long.");
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            RegisterError = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            await SavingSpinner.HideAsync();
+        }
+    }
+}

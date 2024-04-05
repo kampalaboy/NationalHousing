@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <ServiceWorkerAssetsManifest>service-worker-assets.js</ServiceWorkerAssetsManifest>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Blazor.SubtleCrypto" Version="6.0.1" />
+    <PackageReference Include="Blazored.LocalStorage" Version="4.2.0" />
+    <PackageReference Include="Blazored.Toast" Version="3.2.2" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="6.0.9" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="6.0.7" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="6.0.0" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+    <PackageReference Include="Syncfusion.Blazor.Buttons" Version="20.2.0.38" />
+    <PackageReference Include="Syncfusion.Blazor.Calendars" Version="20.2.0.38" />
+    <PackageReference Include="Syncfusion.Blazor.Core" Version="20.2.0.38" />
+    <PackageReference Include="Syncfusion.Blazor.Diagram" Version="20.2.0.38" />
+    <PackageReference Include="Syncfusion.Blazor.Grid" Version="20.2.0.38" />
+    <PackageReference Include="Syncfusion.Blazor.Inputs" Version="20.2.0.38" />
+    <PackageReference Include="Syncfusion.Blazor.Navigations" Version="20.2.0.38" />
+    <PackageReference Include="Syncfusion.Blazor.Notifications" Version="20.2.0.38" />
+    <PackageReference Include="Syncfusion.Blazor.PdfViewer" Version="20.2.0.38" />
+    <PackageReference Include="Syncfusion.Blazor.Popups" Version="20.2.0.38" />
+    <PackageReference Include="Syncfusion.Blazor.ProgressBar" Version="20.2.0.38" />
+    <PackageReference Include="Syncfusion.Blazor.RichTextEditor" Version="20.2.0.38" />
+    <PackageReference Include="Syncfusion.Blazor.Schedule" Version="20.2.0.38" />
+    <PackageReference Include="Syncfusion.Blazor.Themes" Version="20.2.0.38" />
+    <PackageReference Include="Syncfusion.Blazor.WordProcessor" Version="20.2.0.38" />
+    <PackageReference Include="Syncfusion.DocIO.Net.Core" Version="20.2.0.40" />
+    <PackageReference Include="Syncfusion.DocIORenderer.Net.Core" Version="20.2.0.40" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ServiceWorker Include="wwwroot\service-worker.js" PublishedContent="wwwroot\service-worker.published.js" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,143 @@
+﻿@page "/appraisal"
+@using System.Net.Http
+@using System.Net.Http.Json
+@using System.Threading.Tasks
+@inject HttpClient Http
+@using Syncfusion.Blazor.Grids
+@using Syncfusion.Blazor.Popups
+@using HCMIS.DTOs
+
+<div class="row">
+    <div class="col-lg-12 col-md-12">
+        <button class="btn btn-primary" @onclick="OnClick">
+            Add New
+        </button>
+    </div>
+</div>
+<br />
+@if (appraisalEntities == null)
+{
+    <p>No records found.</p>
+}
+else
+{
+    <SfGrid @ref="Grid"
+        DataSource="@appraisalEntities"
+        AllowPaging="true"
+        AllowTextWrap="true">
+        <GridEvents CommandClicked="OnCommandClicked"
+                TValue="ViewBscKpiDto">
+        </GridEvents>
+        <GridPageSettings PageSize="15"></GridPageSettings>
+        <GridEditSettings AllowAdding="true"
+                      AllowEditing="true"
+                      AllowDeleting="true"
+                      Mode="EditMode.Dialog">
+        </GridEditSettings>
+        <GridColumns>
+        <GridColumn Field=@nameof(ViewBscKpiDto.BscKpiid) Visible=false HeaderText="Id" TextAlign="TextAlign.Right" Width="120"></GridColumn>
+        <GridColumn Field=@nameof(ViewBscKpiDto.BscKpidescription) HeaderText="Module" Width="150"></GridColumn>
+      @*<GridColumn Field=@nameof(ViewCpdDto.StartDate) HeaderText="Start Date" Format="d" Type="ColumnType.Date" TextAlign="TextAlign.Right" Width="130"></GridColumn>
+        <GridColumn Field=@nameof(ViewCpdDto.EndDate) HeaderText="End Date"  Format="d" Type="ColumnType.Date" Width="120"></GridColumn>
+        <GridColumn Field=@nameof(ViewCpdDto.Location) HeaderText="Location" Width="150"></GridColumn>
+        <GridColumn Field=@nameof(ViewCpdDto.Departments) HeaderText="Departments" TextAlign="TextAlign.Right" Width="130"></GridColumn>
+        <GridColumn Field=@nameof(ViewCpdDto.Officers) HeaderText="Officers" TextAlign="TextAlign.Right" Width="120"></GridColumn>
+        <GridColumn Field=@nameof(ViewCpdDto.Amount) HeaderText="Amount" Format="C2" TextAlign="TextAlign.Right" Width="130"></GridColumn>
+        <GridColumn Field=@nameof(ViewCpdDto.Trainer) HeaderText="Trainer" TextAlign="TextAlign.Right" Width="120"></GridColumn>*@
+            <GridColumn HeaderText="Manage Records" Width="150">
+                <GridCommandColumns>
+                    <GridCommandColumn ButtonOption="@(new CommandButtonOptions()
+                    { Content = "Edit", CssClass = "e-flat" })">
+                    </GridCommandColumn>
+                </GridCommandColumns>
+            </GridColumn>
+        </GridColumns>
+    </SfGrid>
+}
+
+@*<SfDialog Width="50%" ShowCloseIcon="true" IsModal="true" @bind-Visible="@IsVisible">
+    <DialogTemplates>
+        <Header> Appraisal Dialog </Header>
+        <Content> 
+            <AppraisalDialog 
+                @bind-updatedEntity="Entity"
+                id="@id" /> 
+        </Content>
+    </DialogTemplates>
+</SfDialog>*@
+
+
+@code {
+    SfGrid<ViewBscKpiDto>? Grid { get; set; }
+
+    private ViewBscKpiDto? _entity;
+    private List<ViewBscKpiDto> appraisalEntities = new List<ViewBscKpiDto>();
+    private bool IsVisible { get; set; } = false;
+
+    public int id { get; set; }
+
+    //public ViewBscKpiDto? Entity
+    //{
+    //    get => _entity;
+    //    set
+    //    {
+    //        if (value != null)
+    //        {
+    //            var obj = appraisalEntities
+    //                .FirstOrDefault(x => x.BscKpiid.Equals(value.BscKpiid));
+
+    //            if (obj != null)
+    //            {
+    //                obj.BscKpiid = value.AppraisalReasonId;
+    //                obj.AppraisalReason = value.AppraisalReason;
+    //                //obj.EndDate = value.EndDate;
+    //                //obj.Location = value.Location;
+    //                //obj.Module = value.Module;
+    //                //obj.Officers = value.Officers;
+    //                //obj.StartDate = value.StartDate;
+    //                //obj.Trainer = value.Trainer;
+
+    //                this.IsVisible = false;
+    //                Grid.Refresh();
+    //                _entity = null;
+    //            }
+    //            else
+    //            {
+    //                appraisalEntities.Add(new ViewBscKpiDto
+    //                    {
+    //                        AppraisalReasonId = value.AppraisalReasonId,
+    //                        AppraisalReason = value.AppraisalReason,
+    //                        //StartDate = value.StartDate,
+    //                        //EndDate = value.EndDate,
+    //                        //Departments = value.Departments,
+    //                        //Location = value.Location,
+    //                        //Module = value.Module,
+    //                        //Officers = value.Officers,
+    //                        //Trainer = value.Trainer
+    //                    });
+    //                this.IsVisible = false;
+    //                Grid.Refresh();
+    //                _entity = null;
+    //            }
+    //        }
+    //    }
+    //}
+
+    protected override async Task OnInitializedAsync()
+    {
+        appraisalEntities = await Http
+        .GetFromJsonAsync<List<ViewBscKpiDto>>("BscKpi?id=1");
+    }
+
+    public void OnCommandClicked(CommandClickEventArgs<ViewBscKpiDto> args)
+    {
+        id = args.RowData.BscKpiid;
+        this.IsVisible = true;
+    }
+
+    private async Task OnClick()
+    {
+        id = 0;
+        this.IsVisible = true;
+    }
+}

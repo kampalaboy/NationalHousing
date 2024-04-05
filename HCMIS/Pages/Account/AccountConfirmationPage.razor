@@ -1,0 +1,117 @@
+﻿@*@page "/AccountConfirmationPage"*@
+@page "/AccountConfirmationPage/{UserName}"
+@using HCMIS.Model
+@using HCMIS.ViewModel
+@using System.Text.Json
+@inject ApiConfig _ApiConfig;
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@*<h3>AccountConfirmationPage</h3>*@
+
+<style>
+     .center-screen {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        min-height: 100vh;
+        width:96vw;
+        margin:2%;
+    }
+</style>
+
+<div class="center-screen">
+    <div class="row">
+        <div class="col-md-12">
+             <h3>Account Activation</h3>
+        </div>
+         <div class="col-md-12">
+             <SfSpinner @ref="@SavingSpinner" Visible="@Isvisible" CssClass="e-customClass" Size="50" Label="Activating account, please wait........."></SfSpinner>
+        </div>
+        @if(!string.IsNullOrEmpty(RegisterSuccess) || !string.IsNullOrEmpty(RegisterError))
+        {
+            <div class="col-md-12">
+                @if (!string.IsNullOrEmpty(RegisterSuccess))
+                {
+                     <p class="badge badge-success" style="width:100%; padding:15px; font-family:Cambria;font-size:large; background-color:green;color:darkslategrey;">@RegisterSuccess</p>
+                }
+            </div>
+             <div class="col-md-12">
+                 @if (!string.IsNullOrEmpty(RegisterError))
+                {
+                     <p class="badge badge-danger" style="width:100%; padding:15px; font-family:Cambria;font-size:large; background-color:red;color:darkred;">@RegisterError</p>
+                }
+            </div>
+        
+             <div class="col-md-12">
+                  <p class="text-center">Return to the login page? <a data-toggle="tab" href="#" @onclick="@BackToLoginClick">Click here</a></p>
+            </div>
+        }
+        
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string? UserName { get; set; }
+
+
+    SfSpinner? SavingSpinner;
+    private readonly JsonSerializerOptions _options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+    string? RegisterError { get; set; }
+    string? RegisterSuccess { get; set; }
+    bool Isvisible { get; set; }
+
+    private void BackToLoginClick()
+    {
+        Navigation.NavigateTo("/", true);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            if (!string.IsNullOrEmpty(UserName))
+            {
+                Isvisible = true;
+                ActivationModel m = new();
+                m.UserName = UserName;
+                ///inputmodel.ComfirmationUrl = $"{Navigation.BaseUri}AccountConfirmationPage";
+                string json = Newtonsoft.Json.JsonConvert.SerializeObject(m);
+                StringContent httpContent = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+                var result = await Http.PostAsync($"{_ApiConfig.BaseUrl}NonStaff/ActivateUser", httpContent);
+                if (result.IsSuccessStatusCode)
+                {
+                    var content = await result.Content.ReadAsStringAsync();
+                    var data = JsonSerializer.Deserialize<Response>(content, _options);
+                    if(data != null)
+                    {
+                        if (data.IsSuccess)
+                        {
+                            RegisterSuccess = $"Success: {data.Message}";
+                        }
+                        else
+                        {
+                            RegisterError = $"Error: {data.Message}";
+                        }
+                    }
+                }
+                else
+                {
+                    RegisterError = $"Error: {result.ReasonPhrase}";
+                }
+            }
+        }
+        catch(Exception ex)
+        {
+            RegisterError = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            Isvisible = false;
+            StateHasChanged();
+        }
+        await base.OnInitializedAsync();
+    }
+}

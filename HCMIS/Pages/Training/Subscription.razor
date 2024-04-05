@@ -1,0 +1,190 @@
+﻿@page "/subscription"
+@using System.Net.Http
+@using System.Net.Http.Json
+@using System.Threading.Tasks
+@inject HttpClient Http
+@using Syncfusion.Blazor.Grids
+@using HCMIS.DTOs.Training
+
+<div class="row">
+    <div class="col-lg-12 col-md-12">
+        <button class="btn btn-primary" @onclick="OnClick">
+           Add New
+        </button>
+    </div>
+</div>
+<br />
+@if (subscriptionEntities == null)
+{
+    <p>No records found.</p>
+}
+else
+{
+    <SfGrid 
+        @ref="Grid"
+        DataSource="@subscriptionEntities" 
+        AllowPaging="true" 
+        AllowTextWrap="true">
+    <GridEvents 
+        CommandClicked="OnCommandClicked"
+        TValue="ViewSubscriptionDto">
+    </GridEvents>
+    <GridPageSettings PageSize="15"></GridPageSettings>
+    <GridEditSettings 
+        AllowAdding="true" 
+        AllowEditing="true" 
+        AllowDeleting="true" 
+        Mode="EditMode.Dialog">
+    </GridEditSettings>
+       <GridColumns>
+         <GridColumn 
+             Field=@nameof(ViewSubscriptionDto.Id) 
+             HeaderText="Id" 
+             TextAlign="TextAlign.Right"
+             Visible=false
+             Width="120">
+         </GridColumn>
+         <GridColumn 
+             Field=@nameof(ViewSubscriptionDto.EmployeeId) 
+             HeaderText="Employee" 
+             Width="150">
+         </GridColumn>
+         <GridColumn 
+             Field=@nameof(ViewSubscriptionDto.StartDate) 
+             HeaderText="Start Date" 
+             Format="d" 
+             Type="ColumnType.Date" 
+             TextAlign="TextAlign.Right" 
+             Width="130">
+         </GridColumn>
+         <GridColumn 
+             Field=@nameof(ViewSubscriptionDto.EndDate) 
+             HeaderText="End Date"  
+             Format="d" 
+             Type="ColumnType.Date" 
+             Width="120">
+         </GridColumn>
+          <GridForeignColumn 
+              Field=@nameof(ViewSubscriptionDto.ProfessionalAssociation) 
+              HeaderText="Professional Association" 
+              Width="150" 
+              ForeignKeyField="@(nameof(ViewProfessionalAssociationDto.Id))" 
+              ForeignKeyValue="@(nameof(ViewProfessionalAssociationDto.ProfessionalAssociation))" 
+              ForeignDataSource="@professionalAssociations">
+          </GridForeignColumn>
+         <GridColumn 
+             Field=@nameof(ViewSubscriptionDto.CourseDetails) 
+             HeaderText="Course Details" 
+             TextAlign="TextAlign.Right" 
+             Width="130">
+         </GridColumn>
+         <GridColumn 
+             Field=@nameof(ViewSubscriptionDto.Currency) 
+             HeaderText="Currency" 
+             TextAlign="TextAlign.Right" 
+             Width="120">
+         </GridColumn>
+         <GridColumn 
+             Field=@nameof(ViewSubscriptionDto.AmountPaid) 
+             HeaderText="Amount Paid" 
+             Format="C2" 
+             TextAlign="TextAlign.Right" 
+             Width="130">
+         </GridColumn>
+         <GridColumn HeaderText="Manage Records" Width="150">
+            <GridCommandColumns>
+                <GridCommandColumn 
+                    ButtonOption="@(new CommandButtonOptions() 
+                    { Content = "Edit", CssClass = "e-flat" })">
+                </GridCommandColumn>
+            </GridCommandColumns>
+        </GridColumn>
+       </GridColumns>
+    </SfGrid>
+}
+
+<SfDialog Width="50%" ShowCloseIcon="true" IsModal="true" @bind-Visible="@IsVisible">
+    <DialogTemplates>
+        <Header> Subscription Training Dialog </Header>
+        <Content> 
+            <SubscriptionDialog 
+                @bind-updatedEntity="Entity" 
+                id="@id" /> 
+        </Content>
+    </DialogTemplates>
+</SfDialog>
+
+@code { 
+    SfGrid<ViewSubscriptionDto> Grid { get; set; }
+
+    private ViewSubscriptionDto? _entity;
+    private List<ViewSubscriptionDto> subscriptionEntities = new List<ViewSubscriptionDto>();
+    private bool IsVisible { get; set; } = false; 
+    private List<ViewProfessionalAssociationDto>? professionalAssociations;
+    public int id { get; set; }
+    public ViewSubscriptionDto? Entity
+    {
+        get => _entity;
+        set
+        {
+            if (value != null)
+            {
+                var obj = subscriptionEntities
+                    .FirstOrDefault(x => x.Id.Equals(value.Id));
+
+                if (obj != null)
+                {
+                    obj.EmployeeId = value.EmployeeId;
+                    obj.ProfessionalAssociation = value.ProfessionalAssociation;
+                    obj.CourseDetails = value.CourseDetails;
+                    obj.StartDate = value.StartDate;
+                    obj.EndDate = value.EndDate;
+                    obj.Currency = value.Currency;
+                    obj.AmountPaid = value.AmountPaid;
+
+                    this.IsVisible = false;
+                    Grid.Refresh();
+                    _entity = null;
+                }
+                else
+                {
+                    subscriptionEntities.Add(new ViewSubscriptionDto
+                        {
+                            Id = value.Id,
+                            EmployeeId = value.EmployeeId,
+                            StartDate = value.StartDate,
+                            EndDate = value.EndDate,
+                            ProfessionalAssociation = value.ProfessionalAssociation,
+                            CourseDetails = value.CourseDetails,
+                            Currency = value.Currency,
+                            AmountPaid = value.AmountPaid
+                        });
+                    this.IsVisible = false;
+                    Grid.Refresh();
+                    _entity = null;
+                }
+            }
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        professionalAssociations = await Http
+            .GetFromJsonAsync<List<ViewProfessionalAssociationDto>>("professionalassociation/");
+        
+        subscriptionEntities = await Http
+            .GetFromJsonAsync<List<ViewSubscriptionDto>>("subscription");
+    }
+    
+    public void OnCommandClicked(CommandClickEventArgs<ViewSubscriptionDto> args)
+    {
+        id = args.RowData.Id;
+        this.IsVisible = true;
+    }
+    
+    private async Task OnClick()
+    {
+        id = 0;
+        this.IsVisible = true;
+    }
+}

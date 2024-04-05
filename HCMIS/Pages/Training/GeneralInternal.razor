@@ -1,0 +1,257 @@
+﻿@page "/generalinternal"
+@using System.Net.Http
+@using System.Net.Http.Json
+@using System.Threading.Tasks
+@inject HttpClient Http
+@using Syncfusion.Blazor.Grids
+@using Syncfusion.Blazor.Popups
+@using HCMIS.DTOs.Training
+
+<div class="row">
+    <div class="col-lg-12 col-md-12">
+        <button class="btn btn-primary" @onclick="OnClick">
+           Add New
+        </button>
+    </div>
+</div>
+<br />
+@if (generalInternalEntities == null)
+{
+    <div class="row">
+        <div class="col-lg-12 col-md-12">
+            <p>No records found.</p>
+        </div>
+    </div>
+}
+else
+{
+     <div class="row">
+         <div class="col-lg-12 col-md-12">
+            <SfGrid 
+            @ref="Grid"
+            DataSource="@generalInternalEntities" 
+            AllowPaging="true" 
+            AllowTextWrap="true">
+        <GridEvents 
+            CommandClicked="OnCommandClicked"
+            TValue="ViewGeneralInternalDto">
+        </GridEvents>
+        <GridPageSettings PageSize="10"></GridPageSettings>
+        <GridEditSettings 
+            AllowAdding="true" 
+            AllowEditing="true" 
+            AllowDeleting="true" 
+            Mode="EditMode.Dialog">
+        </GridEditSettings>
+           <GridColumns>
+             <GridColumn 
+                 Field=@nameof(ViewGeneralInternalDto.Id) 
+                 HeaderText="Id" 
+                 TextAlign="TextAlign.Right"
+                 Visible="false"
+                 Width="120"></GridColumn>
+             <GridColumn 
+                 Field=@nameof(ViewGeneralInternalDto.TrainingDescription) 
+                 HeaderText="Training Description" 
+                 Width="200"></GridColumn>
+             <GridColumn 
+                 Field=@nameof(ViewGeneralInternalDto.StartDate) 
+                 HeaderText="Start Date" 
+                 Format="d" 
+                 Type="ColumnType.Date" 
+                 Width="120"></GridColumn>
+             <GridColumn 
+                 Field=@nameof(ViewGeneralInternalDto.EndDate) 
+                 HeaderText="End Date"  
+                 Format="d" 
+                 Type="ColumnType.Date" 
+                 Width="120"></GridColumn>
+             <GridColumn 
+                 Field=@nameof(ViewGeneralInternalDto.TrainingMethod) 
+                 HeaderText="Training Method" 
+                 Width="180">
+                  <Template>
+                    @{
+                        var data = (context as ViewGeneralInternalDto);
+                        if (!string.IsNullOrEmpty(data.TrainingMethod))
+                        {
+                            string result = string.Empty;
+                            var a = data.TrainingMethod.Split(",");
+                            int count = 1;
+                            foreach (var n in a)
+                            {
+                                int b = Convert.ToInt32(n.Trim());
+                                var x = trainingMethods.FirstOrDefault(o => o.Id == b);
+                                if (x != null)
+                                {
+                                    if (count != a.Length)
+                                    {
+                                        result += x.TrainingMethod + ", ";
+                                    }
+                                    else
+                                    {
+                                        result += x.TrainingMethod;
+                                    }
+                                }
+                                count++;
+                            }
+                            <p>@result</p>
+                        }
+                        else
+                        {
+                            <p></p>
+                        }
+                    }
+                                                                            </Template>
+             </GridColumn>
+
+             <GridColumn 
+                 Field=@nameof(ViewGeneralInternalDto.TargetTeam) 
+                 HeaderText="Target Team"  
+                 Width="200">
+                   <Template>
+                    @{
+                        var data = (context as ViewGeneralInternalDto);
+                        if (!string.IsNullOrEmpty(data.TargetTeam))
+                        {
+                            string result = string.Empty;
+                            var a = data.TargetTeam.Split(",");
+                            int count = 1;
+                            foreach (var n in a)
+                            {
+                                int b = Convert.ToInt32(n.Trim());
+                                var x = targetTeams.FirstOrDefault(o => o.Id == b);
+                                if (x != null)
+                                {
+                                    if (count != a.Length)
+                                    {
+                                        result += x.TargetTeam + ", ";
+                                    }
+                                    else
+                                    {
+                                        result += x.TargetTeam;
+                                    }
+                                }
+                                count++;
+                            }
+                            <p>@result</p>
+                        }
+                        else
+                        {
+                            <p></p>
+                        }
+                    }
+                                                                            </Template>
+             </GridColumn>
+         
+             <GridColumn 
+                 Field=@nameof(ViewGeneralInternalDto.ExpectedOutcomes) 
+                 HeaderText="Expected Outcomes"
+                 Width="200"></GridColumn>
+             <GridColumn HeaderText="Manage Records" Width="150">
+                <GridCommandColumns>
+                    <GridCommandColumn 
+                        ButtonOption="@(new CommandButtonOptions() 
+                        { Content = "Edit", CssClass = "e-flat" })">
+                    </GridCommandColumn>
+                </GridCommandColumns>
+            </GridColumn>
+         </GridColumns>
+        </SfGrid>
+        </div>
+    </div>
+}
+
+<SfDialog Width="50%" ShowCloseIcon="true" IsModal="true" @bind-Visible="@IsVisible">
+    <DialogTemplates>
+        <Header> General Internal Training Dialog </Header>
+        <Content> 
+            <GeneralInternalDialog 
+                @bind-updatedEntity="Entity" 
+                id="@id" /> 
+        </Content>
+    </DialogTemplates>
+</SfDialog>
+
+@code {
+    SfGrid<ViewGeneralInternalDto> Grid { get; set; }
+
+    private ViewGeneralInternalDto? _entity;
+    private List<ViewGeneralInternalDto> generalInternalEntities 
+        = new List<ViewGeneralInternalDto>();
+     private List<ViewTrainingMethodDto>? trainingMethods;
+    private List<ViewTargetTeamDto>? targetTeams;
+    private bool IsVisible { get; set; } = false; 
+
+    public int id { get; set; }
+    public ViewGeneralInternalDto? Entity
+    {
+        get => _entity;
+        set
+        {
+            if (value != null)
+            {
+                var obj = generalInternalEntities
+                    .FirstOrDefault(x => x.Id.Equals(value.Id));
+
+                if (obj != null)
+                {
+                    obj.TrainingDescription = value.TrainingDescription;
+                    obj.StartDate = value.StartDate;
+                    obj.EndDate = value.EndDate;
+                    obj.TrainingMethod = value.TrainingMethod;
+                    obj.TargetTeam = value.TargetTeam;
+                    obj.ExpectedOutcomes = value.ExpectedOutcomes;
+                    obj.TrainingGeneralInternalBudget = value.TrainingGeneralInternalBudget;
+
+                    this.IsVisible = false;
+                    Grid.Refresh();
+                    _entity = null;
+                }
+                else
+                {
+                    generalInternalEntities.Add(new ViewGeneralInternalDto
+                        {
+                            Id = value.Id,
+                            TrainingDescription = value.TrainingDescription,
+                            StartDate = value.StartDate,
+                            EndDate = value.EndDate,
+                            TrainingMethod = value.TrainingMethod,
+                            TargetTeam = value.TargetTeam,
+                            ExpectedOutcomes = value.ExpectedOutcomes,
+                            TrainingGeneralInternalBudget = value.TrainingGeneralInternalBudget
+                        });
+                    this.IsVisible = false;
+                    Grid.Refresh();
+                    _entity = null;
+                }
+            }
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        
+        trainingMethods = await Http
+            .GetFromJsonAsync<List<ViewTrainingMethodDto>>("trainingmethod/");
+        
+        targetTeams = await Http
+            .GetFromJsonAsync<List<ViewTargetTeamDto>>("targetteam/");
+
+        generalInternalEntities = await Http
+            .GetFromJsonAsync<List<ViewGeneralInternalDto>>("generalinternal");
+    }
+
+    public void OnCommandClicked(CommandClickEventArgs<ViewGeneralInternalDto> args)
+    {
+        id = args.RowData.Id;
+        this.IsVisible = true;
+    }
+
+    private async Task OnClick()
+    {
+        id = 0;
+        this.IsVisible = true;
+    }
+
+}

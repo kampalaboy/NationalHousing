@@ -1,0 +1,595 @@
+﻿@using HCMIS.Data
+@using HCMIS.Model
+@using System.Text.Json
+@using HCMIS.ViewModel
+@using System.Collections;
+@inject HttpClient Http
+@inject AppState AppState
+@inject ApiConfig _ApiConfig;
+@inject NavigationManager Navigation
+@inject DocumentUploadModel _DocumentUploadModel;
+
+<div class="row">
+    <div class="col-lg-12 control-section">
+        <SfToast @ref="ToastObj" ID="toast_type">
+            <ToastPosition X="@ToastPosition"></ToastPosition>
+        </SfToast>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <h3>Skills</h3>
+    </div>
+      <div class="col-md-12">
+         <SfGrid @ref="SkillsGrid" TValue="NonStaffSkills" Query="@mainQuery"
+                                    Toolbar="@(new string[] {"Add","Edit","Delete","Update","Cancel","ColumnChooser"})" AllowGrouping="false" ShowColumnChooser="true" AllowTextWrap="true"
+                                    AllowPaging="true" AllowFiltering="true" FilterType="Syncfusion.Blazor.DropDowns.FilterType.Contains" GridLines="GridLine.Both" AllowSelection="true">
+                                @*<GridGroupSettings Columns="@GroupedColumns"></GridGroupSettings>*@
+                                <SfDataManager AdaptorInstance="@typeof(NonStaffSkillsAdapter)" Adaptor="Adaptors.CustomAdaptor"></SfDataManager>
+                                <GridSelectionSettings Mode="Syncfusion.Blazor.Grids.SelectionMode.Row" Type="Syncfusion.Blazor.Grids.SelectionType.Single"></GridSelectionSettings>
+                                <GridSearchSettings IgnoreCase="true"></GridSearchSettings>
+                               @* OnActionBegin="OnSkillsActionBegin"*@
+                                <GridEvents  OnActionComplete="@OnSkillsActionComplete" TValue="NonStaffSkills"></GridEvents>
+                                <GridEditSettings AllowAdding="true" AllowDeleting="false" AllowEditing="true" Mode="@EditMode.Dialog" Dialog="DialogParams">
+
+                                    <HeaderTemplate>
+                                        @{
+                                            var text = GetSkillsHeader((context as NonStaffSkills));
+                                                    <div class="headerbandimg" /><span>@text</span>
+                                        }
+                                    </HeaderTemplate>
+                                    <Template Context="SkillsContext">
+                                        @{
+                                            SkillsReviewData = (SkillsContext as NonStaffSkills);
+                                            if(SkillsReviewData != null)
+                                            {
+                                                 SkillsReviewData.NonStaffid = NonstaffId;
+                                                        <div style="padding:15px;">
+                                                            <div class="row">
+                                                                <div class="col-md-12" hidden>
+                                                                    <SfNumericTextBox @bind-Value="@(SkillsReviewData.ExtraSkillsId)" Enabled="false" Placeholder="ExtraSkillsId" Format="N0" FloatLabelType="FloatLabelType.Always"></SfNumericTextBox>
+                                                                </div>
+                                                                <div class="col-md-12">
+                                                                     <p>Skill <span style="color:red;">(*)</span></p>
+                                                                    <SfTextBox Multiline="false" @bind-Value="@(SkillsReviewData.SkillDescription)" Enabled="true" Placeholder="Enter Skill" FloatLabelType="FloatLabelType.Never"></SfTextBox>
+                                                                </div>
+                                                               <div class="col-md-12">
+                                                                    <p>Skill Level <span style="color:red;">(*)</span></p>
+                                                                    <SfDropDownList @bind-Value="@(SkillsReviewData.SkillLevelId)" Enabled="true" TItem="ASkillLevel" TValue="int?" DataSource="@SkillLevelData" Placeholder="Please select" FloatLabelType="FloatLabelType.Never" AllowFiltering="true" FilterType="Syncfusion.Blazor.DropDowns.FilterType.Contains">
+                                                                        <DropDownListFieldSettings Value="@nameof(ASkillLevel.SkillLevelId)" Text="@nameof(ASkillLevel.SkillLevelDesc)"></DropDownListFieldSettings>
+                                                                    </SfDropDownList>
+                                                                </div>
+                                                                <div class="col-md-12">
+                                                                     <p>Years of Experience</p>
+                                                                    <SfNumericTextBox Format="N0" @bind-Value="@(SkillsReviewData.YearsofExperience)" Enabled="true" Placeholder="Enter Number of years" FloatLabelType="FloatLabelType.Never"></SfNumericTextBox>
+                                                                </div> 
+                                                            </div>
+                                                        </div>
+                                            }
+                                           
+                                        }
+                                    </Template>
+                                </GridEditSettings>
+                                <GridFilterSettings Type="Syncfusion.Blazor.Grids.FilterType.Excel"></GridFilterSettings>
+                                <GridPageSettings PageSize="20"></GridPageSettings>
+                                <GridColumns>
+                                    <GridColumn Type="ColumnType.CheckBox" Width="50"></GridColumn>
+                                    <GridColumn Field=@nameof(NonStaffSkills.ExtraSkillsId) HeaderText="ExtraSkillsId" TextAlign="TextAlign.Left" IsPrimaryKey="true" IsIdentity="true" Visible="false" Width="100"></GridColumn>
+                                   <GridColumn Field=@nameof(NonStaffSkills.SkillDescription) HeaderText="Skill" Width="150"></GridColumn>
+                                     <GridForeignColumn Field=@nameof(NonStaffSkills.SkillLevelId) HeaderText="Skill Level" Width="150" ForeignKeyField="@(nameof(ASkillLevel.SkillLevelId))" ForeignKeyValue="@(nameof(ASkillLevel.SkillLevelDesc))" ForeignDataSource="@SkillLevelData"></GridForeignColumn>
+                                    <GridColumn Field=@nameof(NonStaffSkills.YearsofExperience) HeaderText="Years of Experience" Width="150"></GridColumn>
+                                </GridColumns>
+                            </SfGrid>
+    </div>
+    <div class="col-md-12">
+        @if (!string.IsNullOrEmpty(ErrorMessage))
+        {
+            <p class="alert-danger" style="padding:10px;">@ErrorMessage</p>
+        }
+    </div>
+ </div>
+
+@code {
+    #region Toasters
+    public static string ToastContent { get; set; }
+    SfToast ToastObj;
+    SfToast DeleteToastObj;
+    private string ToastPosition = "Right";
+    private int AlarmTimeout { get; set; } = 120000;
+    private List<ToastModel> Toast = new List<ToastModel>
+        {
+            new ToastModel{ Title = "Warning!", Content=ToastContent, CssClass="e-toast-warning", Icon="e-warning toast-icons" },
+            new ToastModel{ Title = "Success!", Content=ToastContent, CssClass="e-toast-success", Icon="e-success toast-icons" },
+            new ToastModel{ Title = "Error!", Content=ToastContent, CssClass="e-toast-danger", Icon="e-error toast-icons" },
+            new ToastModel{ Title = "Information!", Content=ToastContent, CssClass="e-toast-info", Icon="e-info toast-icons" }
+        };
+    #endregion Toasters
+
+    [Parameter]
+    public int NonstaffId { get; set; }
+    [Parameter]
+    public string? AccessToken { get; set; }
+    [Parameter]
+    public List<ASkillLevel>? SkillLevelData{ get; set; }
+    SfSpinner UploadSkillsSpinner;
+    SfGrid<NonStaffSkills>? SkillsGrid;
+    private NonStaffSkills? SkillsReviewData{ get; set; }
+    Query mainQuery { get; set; } = new();
+    string? ErrorMessage { get; set; } = null;
+    private DialogSettings DialogParams = new DialogSettings { Height="auto",MinHeight="60vh",Width="60%" };
+    private readonly JsonSerializerOptions _options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            mainQuery = new();
+            mainQuery.AddParams("NonstaffId", NonstaffId).AddParams("AccessToken", AccessToken).AddParams("BaseUrl",_ApiConfig.BaseUrl);
+
+            var tasks = new List<Task>();
+            tasks.Add(Task.Run(async () =>
+           {
+           //Http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", AccessToken);
+           //var response = await Http.GetAsync($"{_ApiConfig.BaseUrl}NonStaff/GetNonStaffById/{NonstaffId}");
+           //var content = await response.Content.ReadAsStringAsync();
+           //if (response.IsSuccessStatusCode)
+           //{
+           //    inputmodel = JsonSerializer.Deserialize<NonStaff>(content, _options);
+           //}
+           }));
+
+            Task t = Task.WhenAll(tasks);
+            await t;
+        }
+        catch(Exception ex)
+        {
+            ErrorMessage=$"Error: {ex.Message}";
+        }
+        await base.OnInitializedAsync();
+    }
+
+    public class NonStaffSkillsAdapter : DataAdaptor
+    {
+        HttpClient Http;
+        private readonly JsonSerializerOptions _options;
+        SystemSettings _SystemSettings;
+        ApiConfig _ApiConfig;
+        public IToastService toastService;
+        //private UserManagement _userManagement;
+        public NonStaffSkillsAdapter(HttpClient _http, IToastService ts/*, UserManagement userManagement*/
+        ,SystemSettings systemSettings,ApiConfig apiConfig)
+        {
+            Http = _http;
+            _options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            _SystemSettings = systemSettings;
+            _ApiConfig = apiConfig;
+            //_userManagement = userManagement;
+            toastService = ts;
+        }
+
+        public override async Task<Object> ReadAsync(DataManagerRequest dataManagerRequest, string key = null)
+        {
+            var data = new List<NonStaffSkills>();
+            try
+            {
+                int? NonstaffId = null;
+                string? AccessToken = null;
+                string? BaseUrl = null;
+                if (dataManagerRequest.Params != null && dataManagerRequest.Params.Count > 0)
+                {
+                    var val = dataManagerRequest.Params;
+                    if (val.FirstOrDefault(o => o.Key == "NonstaffId").Value != null)
+                    {
+                        NonstaffId = Convert.ToInt32(val.FirstOrDefault(o => o.Key == "NonstaffId").Value.ToString());
+                    }
+                    if (val.FirstOrDefault(o => o.Key == "AccessToken").Value != null)
+                    {
+                        AccessToken = val.FirstOrDefault(o => o.Key == "AccessToken").Value.ToString();
+                    }
+                    if (val.FirstOrDefault(o => o.Key == "BaseUrl").Value != null)
+                    {
+                        BaseUrl = val.FirstOrDefault(o => o.Key == "BaseUrl").Value.ToString();
+                    }
+                }
+
+                Http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", AccessToken);
+                var response = await Http.GetAsync($"{BaseUrl}NonStaff/GetSkillsForNonStaff/{NonstaffId}");
+                var content = await response.Content.ReadAsStringAsync();
+                if (response.IsSuccessStatusCode)
+                {
+                    data = JsonSerializer.Deserialize<List<NonStaffSkills>>(content, _options);
+                }
+
+            }
+            catch (Exception ex)
+            {
+                toastService.ShowError(ex.Message.ToString());
+            }
+
+            IEnumerable GridData = data;
+            int _count = data.Count;
+            if (dataManagerRequest.Search != null && dataManagerRequest.Search.Count > 0)
+            {
+                // Searching
+                GridData = DataOperations.PerformSearching(GridData, dataManagerRequest.Search);
+            }
+            if (dataManagerRequest.Where != null && dataManagerRequest.Where.Count > 0)
+            {
+                // Filtering
+                GridData = DataOperations.PerformFiltering(GridData, dataManagerRequest.Where, dataManagerRequest.Where[0].Operator);
+            }
+            if (dataManagerRequest.Sorted?.Count > 0) // perform Sorting
+            {
+                GridData = DataOperations.PerformSorting(GridData, dataManagerRequest.Sorted);
+            }
+            if (dataManagerRequest.Skip != 0)
+            {
+                GridData = DataOperations.PerformSkip(GridData, dataManagerRequest.Skip); //Paging
+            }
+            if (dataManagerRequest.Take != 0)
+            {
+                GridData = DataOperations.PerformTake(GridData, dataManagerRequest.Take);
+            }
+            IDictionary<string, object> aggregates = new Dictionary<string, object>();
+            if (dataManagerRequest.Aggregates != null) // Aggregation
+            {
+                aggregates = DataUtil.PerformAggregation(GridData, dataManagerRequest.Aggregates);
+            }
+            if (dataManagerRequest.Group != null && dataManagerRequest.Group.Any()) //Grouping
+            {
+                foreach (var group in dataManagerRequest.Group)
+                {
+                    GridData = DataUtil.Group<NonStaffSkills>(GridData, group, dataManagerRequest.Aggregates, 0, dataManagerRequest.GroupByFormatter);
+                }
+            }
+            return dataManagerRequest.RequiresCounts ? new DataResult() { Result = GridData, Count = _count, Aggregates = aggregates } : (object)GridData;
+        }
+        public override async Task<Object> InsertAsync(DataManager dataManager, object value, string key)
+        {
+            try
+            {
+                await _SystemSettings.GetLoginCredentials();
+                var val = (value as NonStaffSkills);
+                if(val != null)
+                {
+                    if (val.ExtraSkillsId == 0)
+                    {
+                        Http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _SystemSettings.AccessToken);
+                        string json = Newtonsoft.Json.JsonConvert.SerializeObject(val);
+                        StringContent httpContent = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+
+                        var result = await Http.PostAsync($"{_ApiConfig.BaseUrl}NonStaff/PostSkills", httpContent);
+                        if (result.IsSuccessStatusCode)
+                        {
+                            var content = await result.Content.ReadAsStringAsync();
+                            var data = JsonSerializer.Deserialize<Response>(content, _options);
+                            if(data != null)
+                            {
+                                if (data.IsSuccess)
+                                {
+                                    toastService.ShowSuccess(data.Message);
+                                }
+                                else
+                                {
+                                    toastService.ShowError(data.Message);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            toastService.ShowError(result.ReasonPhrase);
+                        }
+
+                    }
+                    else
+                    {
+                        Http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _SystemSettings.AccessToken);
+                        string json = Newtonsoft.Json.JsonConvert.SerializeObject(val);
+                        StringContent httpContent = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+
+                        var result = await Http.PutAsync($"{_ApiConfig.BaseUrl}NonStaff/PutSkills", httpContent);
+                        if (result.IsSuccessStatusCode)
+                        {
+                            var content = await result.Content.ReadAsStringAsync();
+                            var data = JsonSerializer.Deserialize<Response>(content, _options);
+                            if(data != null)
+                            {
+                                if (data.IsSuccess)
+                                {
+                                    toastService.ShowSuccess(data.Message);
+                                }
+                                else
+                                {
+                                    toastService.ShowError(data.Message);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            toastService.ShowError(result.ReasonPhrase);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                toastService.ShowError(ex.Message.ToString());
+            }
+            return value;
+        }
+        public override async Task<object> RemoveAsync(DataManager dataManager, object value, string keyField, string key)
+        {
+            //try
+            //{
+            //    int data = (int)value;
+            //    using (var dbContext = new MUCOBADIContext())
+            //    {
+            //        var exists = dbContext.AAdministrationPhase.FirstOrDefault(o => o.AdministrationPhaseId == data);
+            //        if (exists != null)
+            //        {
+            //            dbContext.AAdministrationPhase.Remove(exists);
+            //        }
+            //        await dbContext.SaveChangesAsync();
+            //    }
+            //}
+            //catch (Exception ex)
+            //{
+            //    toastService.ShowError(ex.Message.ToString());
+            //}
+
+
+            return value;
+        }
+        public override async Task<object> UpdateAsync(DataManager dataManager, object value, string keyField, string key)
+        {
+            try
+            {
+                await _SystemSettings.GetLoginCredentials();
+                var val = (value as NonStaffSkills);
+                if(val != null)
+                {
+                    if (val.ExtraSkillsId == 0)
+                    {
+                        Http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _SystemSettings.AccessToken);
+                        string json = Newtonsoft.Json.JsonConvert.SerializeObject(val);
+                        StringContent httpContent = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+
+                        var result = await Http.PostAsync($"{_ApiConfig.BaseUrl}NonStaff/PostSkills", httpContent);
+                        if (result.IsSuccessStatusCode)
+                        {
+                            var content = await result.Content.ReadAsStringAsync();
+                            var data = JsonSerializer.Deserialize<Response>(content, _options);
+                            if(data != null)
+                            {
+                                if (data.IsSuccess)
+                                {
+                                    toastService.ShowSuccess(data.Message);
+                                }
+                                else
+                                {
+                                    toastService.ShowError(data.Message);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            toastService.ShowError(result.ReasonPhrase);
+                        }
+
+                    }
+                    else
+                    {
+                        Http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _SystemSettings.AccessToken);
+                        string json = Newtonsoft.Json.JsonConvert.SerializeObject(val);
+                        StringContent httpContent = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+
+                        var result = await Http.PutAsync($"{_ApiConfig.BaseUrl}NonStaff/PutSkills", httpContent);
+                        if (result.IsSuccessStatusCode)
+                        {
+                            var content = await result.Content.ReadAsStringAsync();
+                            var data = JsonSerializer.Deserialize<Response>(content, _options);
+                            if(data != null)
+                            {
+                                if (data.IsSuccess)
+                                {
+                                    toastService.ShowSuccess(data.Message);
+                                }
+                                else
+                                {
+                                    toastService.ShowError(data.Message);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            toastService.ShowError(result.ReasonPhrase);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                toastService.ShowError(ex.Message.ToString());
+            }
+
+            return value;
+        }
+        public override async Task<object> BatchUpdateAsync(DataManager dm, object Changed, object Added, object Deleted, string KeyField, string Key, int? dropIndex)
+        {
+            object? products = null;
+            try
+            {
+                await _SystemSettings.GetLoginCredentials();
+                if (Changed != null)
+                {
+                    products = Changed;
+                    foreach (var val in (List<NonStaffSkills>)Changed)
+                    {
+                        if(val != null)
+                        {
+                            if (val.ExtraSkillsId == 0)
+                            {
+                                Http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _SystemSettings.AccessToken);
+                                string json = Newtonsoft.Json.JsonConvert.SerializeObject(val);
+                                StringContent httpContent = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+
+                                var result = await Http.PostAsync($"{_ApiConfig.BaseUrl}NonStaff/PostSkills", httpContent);
+                                if (result.IsSuccessStatusCode)
+                                {
+                                    var content = await result.Content.ReadAsStringAsync();
+                                    var data = JsonSerializer.Deserialize<Response>(content, _options);
+                                    if(data != null)
+                                    {
+                                        if (data.IsSuccess)
+                                        {
+                                            toastService.ShowSuccess(data.Message);
+                                        }
+                                        else
+                                        {
+                                            toastService.ShowError(data.Message);
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    toastService.ShowError(result.ReasonPhrase);
+                                }
+
+                            }
+                            else
+                            {
+                                Http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _SystemSettings.AccessToken);
+                                string json = Newtonsoft.Json.JsonConvert.SerializeObject(val);
+                                StringContent httpContent = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+
+                                var result = await Http.PutAsync($"{_ApiConfig.BaseUrl}NonStaff/PutSkills", httpContent);
+                                if (result.IsSuccessStatusCode)
+                                {
+                                    var content = await result.Content.ReadAsStringAsync();
+                                    var data = JsonSerializer.Deserialize<Response>(content, _options);
+                                    if(data != null)
+                                    {
+                                        if (data.IsSuccess)
+                                        {
+                                            toastService.ShowSuccess(data.Message);
+                                        }
+                                        else
+                                        {
+                                            toastService.ShowError(data.Message);
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    toastService.ShowError(result.ReasonPhrase);
+                                }
+                            }
+                        }
+                    }
+
+                }
+                if (Added != null)
+                {
+                    products = Added;
+                    foreach (var val in (List<NonStaffSkills>)Added)
+                    {
+                        if(val != null)
+                        {
+                            if (val.ExtraSkillsId == 0)
+                            {
+                                Http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _SystemSettings.AccessToken);
+                                string json = Newtonsoft.Json.JsonConvert.SerializeObject(val);
+                                StringContent httpContent = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+
+                                var result = await Http.PostAsync($"{_ApiConfig.BaseUrl}NonStaff/PostSkills", httpContent);
+                                if (result.IsSuccessStatusCode)
+                                {
+                                    var content = await result.Content.ReadAsStringAsync();
+                                    var data = JsonSerializer.Deserialize<Response>(content, _options);
+                                    if(data != null)
+                                    {
+                                        if (data.IsSuccess)
+                                        {
+                                            toastService.ShowSuccess(data.Message);
+                                        }
+                                        else
+                                        {
+                                            toastService.ShowError(data.Message);
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    toastService.ShowError(result.ReasonPhrase);
+                                }
+
+                            }
+                            else
+                            {
+                                Http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _SystemSettings.AccessToken);
+                                string json = Newtonsoft.Json.JsonConvert.SerializeObject(val);
+                                StringContent httpContent = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+
+                                var result = await Http.PutAsync($"{_ApiConfig.BaseUrl}NonStaff/PutSkills", httpContent);
+                                if (result.IsSuccessStatusCode)
+                                {
+                                    var content = await result.Content.ReadAsStringAsync();
+                                    var data = JsonSerializer.Deserialize<Response>(content, _options);
+                                    if(data != null)
+                                    {
+                                        if (data.IsSuccess)
+                                        {
+                                            toastService.ShowSuccess(data.Message);
+                                        }
+                                        else
+                                        {
+                                            toastService.ShowError(data.Message);
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    toastService.ShowError(result.ReasonPhrase);
+                                }
+                            }
+                        }
+                    }
+
+                }
+                if (Deleted != null)
+                {
+                    products = Deleted;
+                    //foreach (var rec in (List<OrderDetails>)Deleted)
+                    //{
+                    //    Orders.Remove(Orders.Where(or => or.OrderID == rec.OrderID).FirstOrDefault());
+                    //}
+
+                }
+            }
+            catch (Exception ex)
+            {
+                toastService.ShowError(ex.Message.ToString());
+            }
+            return products;
+        }
+    }
+    public async Task OnSkillsActionComplete(ActionEventArgs<NonStaffSkills> args)
+    {
+        if (args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Add) || args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.BeginEdit))
+        {
+            SkillsGrid.PreventRender(false);
+        }
+    }
+    public string GetSkillsHeader(NonStaffSkills Value)
+    {
+        if (Value.ExtraSkillsId == 0)
+        {
+            return "Add a New Skill";
+        }
+        else
+        {
+            return "Edit Details for " + Value.SkillDescription;
+        }
+    }
+}

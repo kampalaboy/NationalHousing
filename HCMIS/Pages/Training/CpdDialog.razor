@@ -1,0 +1,110 @@
+﻿@using System.Net.Http
+@using System.Net.Http.Json
+@using System.Threading.Tasks
+@inject HttpClient Http
+@using Syncfusion.Blazor
+@using Syncfusion.Blazor.Inputs
+@using Syncfusion.Blazor.Calendars
+@using Syncfusion.Blazor.DropDowns
+@using HCMIS.DTOs.Training
+@using System.Text
+@using System.Text.Json
+
+@if(selectedEntity != null)
+{
+    <div class="content">
+            <div class="row">
+                <div class="col-lg-12 col-md-12">
+                    <input id="Module" @bind="selectedEntity.Id" hidden=true />
+                    <label>Module</label>
+                    <SfTextBox Value="@selectedEntity.Module"></SfTextBox>
+
+                    <label>Start Date</label>
+                    <SfDateTimePicker @bind-Value="@selectedEntity.StartDate"
+                        TValue="DateTime?" Placeholder='Select a date'></SfDateTimePicker>
+                    <label>End Date</label>
+                    <SfDateTimePicker  @bind-Value="@selectedEntity.EndDate"
+                        TValue="DateTime?" Placeholder='Select a date'></SfDateTimePicker>
+                    <label>Location</label>
+                    <SfTextBox Value="@selectedEntity.Location"></SfTextBox>
+                    <label>Departments</label>
+                    <SfMultiSelect 
+                        TValue="string[]" 
+                        TItem="string" 
+                        Mode="VisualMode.CheckBox" 
+                        Placeholder='Select'></SfMultiSelect>
+                    <label>Officers</label>
+                   <SfMultiSelect 
+                       TValue="string[]" 
+                       TItem="string" 
+                       Mode="VisualMode.CheckBox" 
+                       Placeholder='Select'></SfMultiSelect>
+                    <label>Amount</label>
+                    <SfNumericTextBox TValue="double?" Value=@selectedEntity.Amount></SfNumericTextBox>
+                    <label>Trainer</label>
+                    <SfTextBox Value="@selectedEntity.Trainer"></SfTextBox>
+                </div>
+        </div>
+    </div>
+}
+<button class="btn btn-primary" @onclick="OnClick">
+    Show password
+</button>
+                
+@code {
+    private readonly JsonSerializerOptions _options 
+        = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+
+    [Parameter]
+    public int? id { get; set; }
+
+    [Parameter]
+    public ViewCpdDto? updatedEntity { get; set; }
+
+    [Parameter]
+    public EventCallback<ViewCpdDto> updatedEntityChanged { get; set; }
+
+    private ViewCpdDto? selectedEntity;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (id != null && id != 0)
+        {
+            selectedEntity = await Http
+                .GetFromJsonAsync<ViewCpdDto>("cpd/" + id);
+        }
+        else
+        {
+            selectedEntity = new ViewCpdDto();
+        }
+    }
+
+    private async Task OnClick()  
+    {
+        if (selectedEntity.Id == 0)
+        {
+            var entity = JsonSerializer.Serialize(selectedEntity);
+            var requestContent = new StringContent(entity, Encoding.UTF8, "application/json");
+
+            var response = await Http.PostAsync("cpd/add", requestContent);
+            response.EnsureSuccessStatusCode();
+
+            var content = await response.Content.ReadAsStringAsync();
+            updatedEntity = JsonSerializer.Deserialize<ViewCpdDto>(content, _options);
+        }
+        else
+        {
+            var entity = JsonSerializer.Serialize(selectedEntity);
+            var requestContent = new StringContent(entity, Encoding.UTF8, "application/json");
+
+            var response = await Http.PutAsync("cpd/update", requestContent);
+            response.EnsureSuccessStatusCode();
+
+            var content = await response.Content.ReadAsStringAsync();
+            updatedEntity = JsonSerializer.Deserialize<ViewCpdDto>(content, _options);
+        }
+
+        await updatedEntityChanged.InvokeAsync(updatedEntity);
+    } 
+
+}

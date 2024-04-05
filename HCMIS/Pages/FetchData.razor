@@ -1,0 +1,84 @@
+﻿@page "/fetchdata"
+@using System.Text.Json
+@using System.Net.Http.Headers
+@inject HttpClient Http
+@using HCMIS.Model
+@inject SystemSettings _SystemSettings
+@inject ApiConfig _ApiConfig;
+@inject AppState AppState
+@inject NavigationManager Navigation
+
+<PageTitle>Weather forecast</PageTitle>
+
+<h1>Weather forecast</h1>
+
+<p>This component demonstrates fetching data from the server.</p>
+
+@if (forecasts == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Temp. (C)</th>
+                <th>Temp. (F)</th>
+                <th>Summary</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var forecast in forecasts)
+            {
+                <tr>
+                    <td>@forecast.Date.ToShortDateString()</td>
+                    <td>@forecast.TemperatureC</td>
+                    <td>@forecast.TemperatureF</td>
+                    <td>@forecast.Summary</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private WeatherForecast[]? forecasts;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await _SystemSettings.GetLoginCredentials();
+        if(string.IsNullOrEmpty(_SystemSettings.AccessToken))
+        {
+            AppState.LoggedIn = false;
+            Navigation.NavigateTo("/");
+        }
+        else if(DateTime.Now > _SystemSettings.ExpiryDate)
+        {
+            AppState.LoggedIn = false;
+            Navigation.NavigateTo("/");
+        }
+        var _options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+          Http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _SystemSettings.AccessToken);
+         var response = await Http.GetAsync($"{_ApiConfig.BaseUrl}WeatherForecast");
+                var content = await response.Content.ReadAsStringAsync();
+                if (response.IsSuccessStatusCode)
+                {
+                    forecasts = JsonSerializer.Deserialize<WeatherForecast[]>(content, _options);
+                }
+
+      //  forecasts = await Http.GetFromJsonAsync<WeatherForecast[]>("sample-data/weather.json");
+    }
+
+    public class WeatherForecast
+    {
+        public DateTime Date { get; set; }
+
+        public int TemperatureC { get; set; }
+
+        public string? Summary { get; set; }
+
+        public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
+    }
+}

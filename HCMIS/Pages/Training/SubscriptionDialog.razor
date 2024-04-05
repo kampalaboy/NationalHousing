@@ -1,0 +1,128 @@
+﻿@using System.Net.Http
+@using System.Net.Http.Json
+@using System.Threading.Tasks
+@inject HttpClient Http
+@using Syncfusion.Blazor
+@using Syncfusion.Blazor.Inputs
+@using Syncfusion.Blazor.Calendars
+@using HCMIS.DTOs.Training
+@using HCMIS.DTOs.Utilities
+@using System.Text
+@using System.Text.Json
+
+@if(selectedEntity != null)
+{
+    <div class="content">
+            <div class="row">
+                <div class="col-lg-12 col-md-12">
+                    <input id="Id" @bind="selectedEntity.Id" hidden=true />
+                    <label>Employee</label>
+                    <SfDropDownList TValue="string" TItem="string" Placeholder="Select"></SfDropDownList>
+                    <label>Professioal Association</label>
+                    <SfDropDownList 
+                        TValue="int?" 
+                        Placeholder="Select" 
+                        TItem="ViewProfessionalAssociationDto" 
+                        @bind-Value="@(selectedEntity.ProfessionalAssociation)" 
+                        DataSource="@professionalAssociations">
+                        <DropDownListFieldSettings 
+                            Value="Id" 
+                            Text="ProfessionalAssociation">
+                        </DropDownListFieldSettings>
+                    </SfDropDownList>
+                    <label>Course Details</label>
+                    <SfTextBox Value="@selectedEntity.CourseDetails"></SfTextBox>
+                    <label>Start Date</label>
+                    <SfDateTimePicker @bind-Value="@selectedEntity.StartDate"
+                        TValue="DateTime?" Placeholder='Select a date'></SfDateTimePicker>
+                    <label>End Date</label>
+                    <SfDateTimePicker  @bind-Value="@selectedEntity.EndDate"
+                        TValue="DateTime?" Placeholder='Select a date'></SfDateTimePicker>
+                    <label>Currency</label>
+                    <SfDropDownList 
+                        TValue="string" 
+                        Placeholder="Select" 
+                        TItem="ViewCurrencyDto" 
+                        @bind-Value="@(selectedEntity.Currency)" 
+                        DataSource="@currencies">
+                        <DropDownListFieldSettings 
+                            Value="IsoCode" 
+                            Text="Currency">
+                        </DropDownListFieldSettings>
+                    </SfDropDownList>
+                    <label>Amount Paid</label>
+                   <SfNumericTextBox TValue="double?" Value=@selectedEntity.AmountPaid></SfNumericTextBox>
+                </div>
+        </div>
+    </div>
+}
+<br />
+<button class="btn btn-primary" @onclick="OnClick">
+    Save
+</button>
+                
+@code {
+    private readonly JsonSerializerOptions _options 
+        = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+
+    [Parameter]
+    public int? id { get; set; }
+
+    [Parameter]
+    public ViewSubscriptionDto? updatedEntity { get; set; }
+
+    [Parameter]
+    public EventCallback<ViewSubscriptionDto> updatedEntityChanged { get; set; }
+
+    private ViewSubscriptionDto? selectedEntity;
+    private List<ViewProfessionalAssociationDto>? professionalAssociations;
+    private List<ViewCurrencyDto>? currencies;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (id != null && id != 0)
+        {
+            selectedEntity = await Http
+                .GetFromJsonAsync<ViewSubscriptionDto>("subscription/" + id);
+        }
+        else
+        {
+            selectedEntity = new ViewSubscriptionDto();
+        }
+
+        professionalAssociations = await Http
+            .GetFromJsonAsync<List<ViewProfessionalAssociationDto>>("professionalassociation/");
+        
+        currencies = await Http
+            .GetFromJsonAsync<List<ViewCurrencyDto>>("currency/");
+    }
+
+    private async Task OnClick()  
+    {
+        if (selectedEntity.Id == 0)
+        {
+            var entity = JsonSerializer.Serialize(selectedEntity);
+            var requestContent = new StringContent(entity, Encoding.UTF8, "application/json");
+
+            var response = await Http.PostAsync("subscription/add", requestContent);
+            response.EnsureSuccessStatusCode();
+
+            var content = await response.Content.ReadAsStringAsync();
+            updatedEntity = JsonSerializer.Deserialize<ViewSubscriptionDto>(content, _options);
+        }
+        else
+        {
+            var entity = JsonSerializer.Serialize(selectedEntity);
+            var requestContent = new StringContent(entity, Encoding.UTF8, "application/json");
+
+            var response = await Http.PutAsync("subscription/update", requestContent);
+            response.EnsureSuccessStatusCode();
+
+            var content = await response.Content.ReadAsStringAsync();
+            updatedEntity = JsonSerializer.Deserialize<ViewSubscriptionDto>(content, _options);
+        }
+
+        await updatedEntityChanged.InvokeAsync(updatedEntity);
+    } 
+
+}

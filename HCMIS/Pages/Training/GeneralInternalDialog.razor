@@ -1,0 +1,221 @@
+﻿@using System.Net.Http
+@using System.Net.Http.Json
+@using System.Threading.Tasks
+@inject HttpClient Http
+@using Syncfusion.Blazor
+@using Syncfusion.Blazor.Inputs
+@using Syncfusion.Blazor.Grids
+@using Syncfusion.Blazor.DropDowns
+@using HCMIS.DTOs.Training
+@using HCMIS.DTOs.Utilities
+@using System.Text
+@using System.Text.Json
+
+@if (selectedEntity != null)
+{
+    <div class="content">
+        <div class="row">
+            <div class="col-lg-12 col-md-12">
+                <input id="Module" @bind="selectedEntity.Id" hidden=true />
+                <label>Training Description</label>
+                <SfTextBox Value="@selectedEntity.TrainingDescription"></SfTextBox>
+                </div>
+                </div>
+        <div class="row">
+                 <div class="col-lg-6 col-md-6">
+                     <label>Start Date</label>
+                     <SfDateTimePicker @bind-Value="@selectedEntity.StartDate"
+                        TValue="DateTime?" Placeholder='Select a date'></SfDateTimePicker>
+                 </div>
+                 <div class="col-lg-6 col-md-6">
+                    <label>End Date</label>
+                    <SfDateTimePicker  @bind-Value="@selectedEntity.EndDate"
+                        TValue="DateTime?" Placeholder='Select a date'></SfDateTimePicker>
+                 </div>
+                 </div>
+        <div class="row">
+                 <div class="col-lg-12 col-md-6">
+                <label>Training Method</label>
+                 <SfMultiSelect 
+                        TValue="string" 
+                        TItem="ViewTrainingMethodDto" 
+                        Mode="VisualMode.CheckBox" 
+                        @bind-Value="@(selectedEntity.TrainingMethod)" 
+                        DataSource="@trainingMethods"
+                        Placeholder='Select'
+                        ShowSelectAll=true 
+                        SelectAllText="Select All" 
+                        UnSelectAllText="Un Select All">
+                        <MultiSelectFieldSettings 
+                            Text="TrainingMethod"
+                            Value="Id">
+                        </MultiSelectFieldSettings>
+                 </SfMultiSelect>
+                 </div>
+                 </div>
+        <div class="row">
+                 <div class="col-lg-12 col-md-6">
+                <label>Target Team</label>
+                 <SfMultiSelect 
+                        TValue="string" 
+                        TItem="ViewTargetTeamDto" 
+                        Mode="VisualMode.CheckBox" 
+                        @bind-Value="@(selectedEntity.TargetTeam)" 
+                        DataSource="@targetTeams"
+                        Placeholder='Select'
+                        ShowSelectAll=true 
+                        SelectAllText="Select All" 
+                        UnSelectAllText="Un Select All">
+                        <MultiSelectFieldSettings 
+                            Text="TargetTeam"
+                            Value="Id">
+                        </MultiSelectFieldSettings>
+                 </SfMultiSelect>
+                 </div>
+                 </div>
+        <div class="row">
+                 <div class="col-lg-12 col-md-6">
+                <label>Expected Outcomes</label>
+                <SfTextBox Value="@selectedEntity.ExpectedOutcomes"></SfTextBox>
+            </div>
+            </div>
+        <br />
+        <div class="row">
+            <div class="col-lg-12 col-md-12">
+                <SfGrid
+                    @ref="Grid"
+                    DataSource="@selectedEntity.TrainingGeneralInternalBudget" 
+                    AllowPaging="true" 
+                    AllowTextWrap="true"
+                    Toolbar="@(new List<string>() { "Add", "Edit", "Delete", "Update", "Cancel" })">
+                    <GridEvents 
+                        TValue="ViewGeneralInternalBudgetDto">
+                    </GridEvents>
+                    <GridPageSettings PageSize="15"></GridPageSettings>
+                    <GridEditSettings 
+                        AllowAdding="true" 
+                        AllowEditing="true" 
+                        AllowDeleting="true" 
+                        ShowConfirmDialog="false"
+                        Mode="EditMode.Batch">
+                    </GridEditSettings>
+                    <GridColumns>
+                        <GridColumn 
+                             Field=@nameof(ViewGeneralInternalBudgetDto.Id) 
+                             HeaderText="Id" 
+                             IsPrimaryKey="true" 
+                             TextAlign="TextAlign.Right"
+                             DefaultValue="0"
+                             Visible=false
+                             Width="120">
+                        </GridColumn>
+                        <GridColumn 
+                             Field=@nameof(ViewGeneralInternalBudgetDto.GeneralInternalId) 
+                             HeaderText="General Internal Id" 
+                             Visible=false
+                             Width="150">
+                        </GridColumn>
+                        <GridForeignColumn 
+                              Field=@nameof(ViewGeneralInternalBudgetDto.FinancialYear) 
+                              HeaderText="Financial Year" 
+                              Width="150" 
+                              ForeignKeyField="@(nameof(ViewFinancialYearDto.Id))" 
+                              ForeignKeyValue="@(nameof(ViewFinancialYearDto.FinancialYear))" 
+                              ForeignDataSource="@financialYears">
+                        </GridForeignColumn>
+                        <GridColumn 
+                             Field=@nameof(ViewGeneralInternalBudgetDto.Budget) 
+                             HeaderText="Budget"  
+                             Width="50">
+                        </GridColumn>
+                        <GridColumn 
+                             Field=@nameof(ViewGeneralInternalBudgetDto.Comment) 
+                             HeaderText="Comment" 
+                             Width="200">
+                        </GridColumn>
+                    </GridColumns>
+                </SfGrid>
+            </div>
+        </div>
+    </div>
+}
+<br />
+<button class="btn btn-primary" @onclick="OnClick">
+    Save
+</button>
+                
+@code {
+    private readonly JsonSerializerOptions _options 
+        = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+
+    SfGrid<ViewGeneralInternalBudgetDto> Grid { get; set; }
+
+    [Parameter]
+    public int? id { get; set; }
+
+    [Parameter]
+    public ViewGeneralInternalDto? updatedEntity { get; set; }
+
+    [Parameter]
+    public EventCallback<ViewGeneralInternalDto> updatedEntityChanged { get; set; }
+
+    private ViewGeneralInternalDto? selectedEntity;
+    private List<ViewTrainingMethodDto>? trainingMethods;
+    private List<ViewTargetTeamDto>? targetTeams;
+    private List<ViewFinancialYearDto>? financialYears;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (id != null && id != 0)
+        {
+            selectedEntity = await Http
+                .GetFromJsonAsync<ViewGeneralInternalDto>("generalinternal/" + id);
+        }
+        else
+        {
+            selectedEntity = new ViewGeneralInternalDto();
+            List<ViewGeneralInternalBudgetDto> budgetList = new List<ViewGeneralInternalBudgetDto>();
+            selectedEntity.TrainingGeneralInternalBudget = budgetList;
+        }
+        
+        trainingMethods = await Http
+            .GetFromJsonAsync<List<ViewTrainingMethodDto>>("trainingmethod/");
+        
+        targetTeams = await Http
+            .GetFromJsonAsync<List<ViewTargetTeamDto>>("targetteam/");
+
+        financialYears = await Http
+            .GetFromJsonAsync<List<ViewFinancialYearDto>>("financialyear/");
+    }
+
+    private async Task OnClick()  
+    {
+        await Grid.EndEditAsync();
+
+        if (selectedEntity.Id == 0)
+        {
+            var entity = JsonSerializer.Serialize(selectedEntity);
+            var requestContent = new StringContent(entity, Encoding.UTF8, "application/json");
+
+            var response = await Http.PostAsync("generalinternal/add", requestContent);
+            response.EnsureSuccessStatusCode();
+
+            var content = await response.Content.ReadAsStringAsync();
+            updatedEntity = JsonSerializer.Deserialize<ViewGeneralInternalDto>(content, _options);
+        }
+        else
+        {
+            var entity = JsonSerializer.Serialize(selectedEntity);
+            var requestContent = new StringContent(entity, Encoding.UTF8, "application/json");
+
+            var response = await Http.PutAsync("generalinternal/update", requestContent);
+            response.EnsureSuccessStatusCode();
+
+            var content = await response.Content.ReadAsStringAsync();
+            updatedEntity = JsonSerializer.Deserialize<ViewGeneralInternalDto>(content, _options);
+        }
+
+        await updatedEntityChanged.InvokeAsync(updatedEntity);
+    } 
+
+}

@@ -1,0 +1,887 @@
+﻿@using HCMIS.Data
+@using HCMIS.Model
+@using System.Text.Json
+@using HCMIS.ViewModel
+@using System.Collections;
+@inject HttpClient Http
+@inject AppState AppState
+@inject ApiConfig _ApiConfig;
+@inject NavigationManager Navigation
+@inject DocumentUploadModel _DocumentUploadModel;
+
+<div class="row">
+    <div class="col-lg-12 control-section">
+        <SfToast @ref="ToastObj" ID="toast_type">
+            <ToastPosition X="@ToastPosition"></ToastPosition>
+        </SfToast>
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-12">
+        <h3>Work Experience</h3>
+    </div>
+   <div class="col-md-12">
+         <SfGrid @ref="WorkExperienceGrid" TValue="NonStaffWorkExperience" Query="@mainQuery"
+                                    Toolbar="@(new string[] {"Add","Edit","Delete","Update","Cancel","ColumnChooser"})" AllowGrouping="false" ShowColumnChooser="true" AllowTextWrap="true"
+                                    AllowPaging="true" AllowFiltering="true" FilterType="Syncfusion.Blazor.DropDowns.FilterType.Contains" GridLines="GridLine.Both" AllowSelection="true">
+                                @*<GridGroupSettings Columns="@GroupedColumns"></GridGroupSettings>*@
+                                <SfDataManager AdaptorInstance="@typeof(NonStaffWorkExperienceAdapter)" Adaptor="Adaptors.CustomAdaptor"></SfDataManager>
+                                <GridSelectionSettings Mode="Syncfusion.Blazor.Grids.SelectionMode.Row" Type="Syncfusion.Blazor.Grids.SelectionType.Single"></GridSelectionSettings>
+                                <GridSearchSettings IgnoreCase="true"></GridSearchSettings>
+                               @* OnActionBegin="OnQualificationActionBegin"*@
+                                <GridEvents  OnActionComplete="@OnWorkExperienceActionComplete" TValue="NonStaffWorkExperience"></GridEvents>
+                                <GridEditSettings AllowAdding="true" AllowDeleting="false" AllowEditing="true" Mode="@EditMode.Dialog" Dialog="DialogParams">
+
+                                    <HeaderTemplate>
+                                        @{
+                                            var text = GetWorkExperienceHeader((context as NonStaffWorkExperience));
+                                                        <div class="headerbandimg" /><span>@text</span>
+                                        }
+                                    </HeaderTemplate>
+                                    <Template Context="WorkExperienceContext">
+                                        @{
+                                            WorkExperienceReviewData = (WorkExperienceContext as NonStaffWorkExperience);
+                                            if(WorkExperienceReviewData != null)
+                                            {
+                                                 WorkExperienceReviewData.NonStaffid = NonstaffId;
+                                                            <div style="padding:15px;">
+                                                                <div class="row">
+                                                                    <div class="col-md-12" hidden>
+                                                                        <SfNumericTextBox @bind-Value="@(WorkExperienceReviewData.WorkExperienceId)" Enabled="false" Placeholder="WorkExperienceId" Format="N0" FloatLabelType="FloatLabelType.Always"></SfNumericTextBox>
+                                                                    </div>
+                                                                    <div class="col-md-6">
+                                                                         <p>Organisation <span style="color:red;">(*)</span></p>
+                                                                        <SfTextBox Multiline="false" @bind-Value="@(WorkExperienceReviewData.Organisation)" Enabled="true" Placeholder="Enter Name" FloatLabelType="FloatLabelType.Never"></SfTextBox>
+                                                                    </div>
+                                                                   <div class="col-md-6">
+                                                                        <p>Job Title <span style="color:red;">(*)</span></p>
+                                                                         <SfTextBox Multiline="false" @bind-Value="@(WorkExperienceReviewData.JobTitle)" Enabled="true" Placeholder="Enter Name" FloatLabelType="FloatLabelType.Never"></SfTextBox>
+                                                                    </div>
+                                                                    <div class="col-md-6">
+                                                                         <p>From <span style="color:red;">(*)</span></p>
+                                                                        <SfDatePicker @bind-Value="@(WorkExperienceReviewData.StartDate)" Placeholder="Select Date" Format="dd/MM/yyyy" FloatLabelType="FloatLabelType.Never"></SfDatePicker>
+                                                                    </div>
+                                                                    <div class="col-md-6">
+                                                                         <p>To</p>
+                                                                        <SfDatePicker @bind-Value="@(WorkExperienceReviewData.EndDate)" Placeholder="Select Date" Format="dd/MM/yyyy" FloatLabelType="FloatLabelType.Never"></SfDatePicker>
+                                                                    </div>
+                                                                    <div class="col-md-6" style="padding-top:35px; padding-bottom:10px;">   
+                                                                        <SfCheckBox Label="Is Current" @bind-Checked="@(WorkExperienceReviewData.IsCurrent)"></SfCheckBox>
+                                                                    </div> 
+                                                                    <div class="col-md-12"></div>
+                                                                    <div class="col-md-6">
+                                                                         <p>Employer Name <span style="color:red;">(*)</span></p>
+                                                                        <SfTextBox Multiline="false" @bind-Value="@(WorkExperienceReviewData.EmployerName)" Enabled="true" Placeholder="Enter Name" FloatLabelType="FloatLabelType.Never"></SfTextBox>
+                                                                    </div>
+                                                                    <div class="col-md-6">
+                                                                         <p>Employer Email <span style="color:red;">(*)</span></p>
+                                                                        <SfTextBox Multiline="false" @bind-Value="@(WorkExperienceReviewData.EmployerOfficialEmail)" Enabled="true" Placeholder="Enter Name" FloatLabelType="FloatLabelType.Never"></SfTextBox>
+                                                                    </div>
+                                                                    <div class="col-md-6">
+                                                                         <p>Employer Official Number <span style="color:red;">(*)</span></p>
+                                                                        <SfNumericTextBox @bind-Value="@(WorkExperienceReviewData.EmployerOfficialNumber)" Format="N0" Enabled="true" Placeholder="Enter Name" FloatLabelType="FloatLabelType.Never"></SfNumericTextBox>
+                                                                    </div>
+                                                                    <div class="col-md-12" style="margin-bottom:10px;">
+                                                                        <p>Responsibilities</p>
+                                                                        <SfRichTextEditor  Height="400px" ShowCharCount="true" @bind-Value="@(WorkExperienceReviewData.Responsibilities)" Placeholder="Type something..." EnableResize=true EditorMode="EditorMode.HTML">
+                                                                        <RichTextEditorQuickToolbarSettings Link="@Link" />
+                                                                        <RichTextEditorToolbarSettings Type="@Tooltype" Items="@Tools" Enable=true   EnableFloating="true" />
+                                                                        </SfRichTextEditor>
+                                                                    </div>
+                                                                    @if(!string.IsNullOrEmpty(WorkExperienceReviewData.Organisation) && !string.IsNullOrEmpty(WorkExperienceReviewData.JobTitle)){
+                                                                         <div class="form-group col-md-12"  style="margin-bottom:10px;">
+                                                                            <p class="alert-primary" style="padding:10px;">Please upload an image in png or Jpeg or gif  or jpg format Or a PDF Document not exceeding 5 Megabytes(MBs) in Size</p>
+                                                                            <SfUploader AutoUpload="true" ShowFileList="false">
+                                                                                <UploaderEvents ValueChange="OnWorkExperienceChange"></UploaderEvents>
+                                                                            </SfUploader>
+                                                                            <SfSpinner @ref="@UploadWorkExperienceSpinner" Visible="false" Label="UpLoading document please wait.."></SfSpinner>
+                                                                        </div>
+                                                                 }
+                                                                   
+                                                                    <div class="form-group col-md-12">
+                                                                        @if (!string.IsNullOrEmpty(WorkExperienceDocumentString))
+                                                                        {
+                                                                            if (!string.IsNullOrEmpty(WorkExperienceReviewData.AppointmentLetterExt) && WorkExperienceReviewData.AppointmentLetterExt.ToLower().Contains("pdf"))
+                                                                            {
+                                                                                        <embed src="@WorkExperienceDocumentString" width="100%" height="600px" style="border: none;" frameborder="0" allowfullscreen="true" />
+                                                                            }
+                                                                            else if(!string.IsNullOrEmpty(WorkExperienceReviewData.AppointmentLetterExt))
+                                                                            {
+                                                                                        <img src="@WorkExperienceDocumentString" class="img-thumbnail" height="500" width="100%" style="margin-bottom:10px; margin:10%; margin-right:auto;" />
+                                                                            }
+                                                                        }
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                            }
+                                           
+                                        }
+                                    </Template>
+                                </GridEditSettings>
+                                <GridFilterSettings Type="Syncfusion.Blazor.Grids.FilterType.Excel"></GridFilterSettings>
+                                <GridPageSettings PageSize="20"></GridPageSettings>
+                                <GridColumns>
+                                    <GridColumn Type="ColumnType.CheckBox" Width="50"></GridColumn>
+                                    <GridColumn Field=@nameof(NonStaffWorkExperience.WorkExperienceId) HeaderText="WorkExperienceId" TextAlign="TextAlign.Left" IsPrimaryKey="true" IsIdentity="true" Visible="false" Width="100"></GridColumn>
+                                    <GridColumn Field=@nameof(NonStaffWorkExperience.Organisation) HeaderText="Organisation" Width="150"></GridColumn>
+                                    <GridColumn Field=@nameof(NonStaffWorkExperience.JobTitle) HeaderText="Job Title" Width="150"></GridColumn>
+                                    <GridColumn Field=@nameof(NonStaffWorkExperience.EmployerName) HeaderText="Employer Name" Width="150"></GridColumn>
+                                    <GridColumn Field=@nameof(NonStaffWorkExperience.EmployerOfficialEmail) HeaderText="Email" Width="150"></GridColumn>
+                                    <GridColumn Field=@nameof(NonStaffWorkExperience.EmployerOfficialNumber) HeaderText="Official Number" Width="150"></GridColumn>
+                                    <GridColumn Field=@nameof(NonStaffWorkExperience.StartDate) Format="dd/MM/yyyy" HeaderText="From" Width="180"></GridColumn>
+                                    <GridColumn Field=@nameof(NonStaffWorkExperience.EndDate) Format="dd/MM/yyyy" HeaderText="To" Width="180"></GridColumn>
+                                    <GridColumn Field=@nameof(NonStaffWorkExperience.IsCurrent) HeaderText="To Current" Width="180"></GridColumn>
+                                </GridColumns>
+                            </SfGrid>
+    </div>
+     <div class="col-md-12">
+        @if (!string.IsNullOrEmpty(ErrorMessage))
+        {
+            <p class="alert-danger" style="padding:10px;">@ErrorMessage</p>
+        }
+    </div>
+</div>
+
+@code {
+    #region Toasters
+    public static string ToastContent { get; set; }
+    SfToast ToastObj;
+    SfToast DeleteToastObj;
+    private string ToastPosition = "Right";
+    private int AlarmTimeout { get; set; } = 120000;
+    private List<ToastModel> Toast = new List<ToastModel>
+        {
+            new ToastModel{ Title = "Warning!", Content=ToastContent, CssClass="e-toast-warning", Icon="e-warning toast-icons" },
+            new ToastModel{ Title = "Success!", Content=ToastContent, CssClass="e-toast-success", Icon="e-success toast-icons" },
+            new ToastModel{ Title = "Error!", Content=ToastContent, CssClass="e-toast-danger", Icon="e-error toast-icons" },
+            new ToastModel{ Title = "Information!", Content=ToastContent, CssClass="e-toast-info", Icon="e-info toast-icons" }
+        };
+    #endregion Toasters
+
+    [Parameter]
+    public int NonstaffId { get; set; }
+    [Parameter]
+    public string? AccessToken { get; set; }
+
+    private ToolbarType Tooltype = ToolbarType.MultiRow;
+    private List<ToolbarItemModel> Tools = new List<ToolbarItemModel>()
+    {
+        new ToolbarItemModel() { Command = ToolbarCommand.Bold },
+        new ToolbarItemModel() { Command = ToolbarCommand.Italic },
+        new ToolbarItemModel() { Command = ToolbarCommand.Underline },
+        new ToolbarItemModel() { Command = ToolbarCommand.StrikeThrough },
+        new ToolbarItemModel() { Command = ToolbarCommand.FontName },
+        new ToolbarItemModel() { Command = ToolbarCommand.FontSize },
+        new ToolbarItemModel() { Command = ToolbarCommand.FontColor },
+        new ToolbarItemModel() { Command = ToolbarCommand.BackgroundColor },
+        new ToolbarItemModel() { Command = ToolbarCommand.LowerCase },
+        new ToolbarItemModel() { Command = ToolbarCommand.UpperCase },
+        new ToolbarItemModel() { Command = ToolbarCommand.Separator },
+        new ToolbarItemModel() { Command = ToolbarCommand.Formats },
+        new ToolbarItemModel() { Command = ToolbarCommand.Alignments },
+        new ToolbarItemModel() { Command = ToolbarCommand.OrderedList },
+        new ToolbarItemModel() { Command = ToolbarCommand.UnorderedList },
+        new ToolbarItemModel() { Command = ToolbarCommand.Outdent },
+        new ToolbarItemModel() { Command = ToolbarCommand.Indent },
+        new ToolbarItemModel() { Command = ToolbarCommand.Separator },
+        new ToolbarItemModel() { Command = ToolbarCommand.CreateLink },
+        new ToolbarItemModel() { Command = ToolbarCommand.Image },
+        new ToolbarItemModel() { Command = ToolbarCommand.Separator },
+        new ToolbarItemModel() { Command = ToolbarCommand.ClearFormat },
+        new ToolbarItemModel() { Command = ToolbarCommand.Print },
+        new ToolbarItemModel() { Command = ToolbarCommand.SourceCode },
+        new ToolbarItemModel() { Command = ToolbarCommand.Separator },
+        new ToolbarItemModel() { Command = ToolbarCommand.Undo },
+        new ToolbarItemModel() { Command = ToolbarCommand.Redo }
+    };
+    private List<LinkToolbarItemModel> Link = new List<LinkToolbarItemModel>()
+    {
+        new LinkToolbarItemModel() { Command = LinkToolbarCommand.Open },
+        new LinkToolbarItemModel() { Command = LinkToolbarCommand.Edit },
+        new LinkToolbarItemModel() { Command = LinkToolbarCommand.UnLink }
+    };
+
+    SfSpinner UploadWorkExperienceSpinner;
+    SfGrid<NonStaffWorkExperience>? WorkExperienceGrid;
+    private NonStaffWorkExperience? WorkExperienceReviewData{ get; set; }
+    Query mainQuery { get; set; } = new();
+    string  WorkExperienceDocumentString { get; set; } = null;
+    string? ErrorMessage { get; set; } = null;
+    private DialogSettings DialogParams = new DialogSettings { Height="auto",MinHeight="85vh",Width="95%" };
+    private readonly JsonSerializerOptions _options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            mainQuery = new();
+            mainQuery.AddParams("NonstaffId", NonstaffId).AddParams("AccessToken", AccessToken).AddParams("BaseUrl",_ApiConfig.BaseUrl);
+
+            var tasks = new List<Task>();
+            tasks.Add(Task.Run(async () =>
+           {
+           //Http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", AccessToken);
+           //var response = await Http.GetAsync($"{_ApiConfig.BaseUrl}NonStaff/GetNonStaffById/{NonstaffId}");
+           //var content = await response.Content.ReadAsStringAsync();
+           //if (response.IsSuccessStatusCode)
+           //{
+           //    inputmodel = JsonSerializer.Deserialize<NonStaff>(content, _options);
+           //}
+           }));
+
+            Task t = Task.WhenAll(tasks);
+            await t;
+        }
+        catch(Exception ex)
+        {
+            ErrorMessage=$"Error: {ex.Message}";
+        }
+        await base.OnInitializedAsync();
+    }
+
+    public class NonStaffWorkExperienceAdapter : DataAdaptor
+    {
+        HttpClient Http;
+        private readonly JsonSerializerOptions _options;
+        SystemSettings _SystemSettings;
+        ApiConfig _ApiConfig;
+        public IToastService toastService;
+        //private UserManagement _userManagement;
+        public NonStaffWorkExperienceAdapter(HttpClient _http, IToastService ts/*, UserManagement userManagement*/
+        ,SystemSettings systemSettings,ApiConfig apiConfig)
+        {
+            Http = _http;
+            _options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            _SystemSettings = systemSettings;
+            _ApiConfig = apiConfig;
+            //_userManagement = userManagement;
+            toastService = ts;
+        }
+
+        public override async Task<Object> ReadAsync(DataManagerRequest dataManagerRequest, string key = null)
+        {
+            var data = new List<NonStaffWorkExperience>();
+            try
+            {
+                int? NonstaffId = null;
+                string? AccessToken = null;
+                string? BaseUrl = null;
+                if (dataManagerRequest.Params != null && dataManagerRequest.Params.Count > 0)
+                {
+                    var val = dataManagerRequest.Params;
+                    if (val.FirstOrDefault(o => o.Key == "NonstaffId").Value != null)
+                    {
+                        NonstaffId = Convert.ToInt32(val.FirstOrDefault(o => o.Key == "NonstaffId").Value.ToString());
+                    }
+                    if (val.FirstOrDefault(o => o.Key == "AccessToken").Value != null)
+                    {
+                        AccessToken = val.FirstOrDefault(o => o.Key == "AccessToken").Value.ToString();
+                    }
+                    if (val.FirstOrDefault(o => o.Key == "BaseUrl").Value != null)
+                    {
+                        BaseUrl = val.FirstOrDefault(o => o.Key == "BaseUrl").Value.ToString();
+                    }
+                }
+
+                Http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", AccessToken);
+                var response = await Http.GetAsync($"{BaseUrl}NonStaff/GetExperienceForNonStaff/{NonstaffId}");
+                var content = await response.Content.ReadAsStringAsync();
+                if (response.IsSuccessStatusCode)
+                {
+                    data = JsonSerializer.Deserialize<List<NonStaffWorkExperience>>(content, _options);
+                }
+
+            }
+            catch (Exception ex)
+            {
+                toastService.ShowError(ex.Message.ToString());
+            }
+
+            IEnumerable GridData = data;
+            int _count = data.Count;
+            if (dataManagerRequest.Search != null && dataManagerRequest.Search.Count > 0)
+            {
+                // Searching
+                GridData = DataOperations.PerformSearching(GridData, dataManagerRequest.Search);
+            }
+            if (dataManagerRequest.Where != null && dataManagerRequest.Where.Count > 0)
+            {
+                // Filtering
+                GridData = DataOperations.PerformFiltering(GridData, dataManagerRequest.Where, dataManagerRequest.Where[0].Operator);
+            }
+            if (dataManagerRequest.Sorted?.Count > 0) // perform Sorting
+            {
+                GridData = DataOperations.PerformSorting(GridData, dataManagerRequest.Sorted);
+            }
+            if (dataManagerRequest.Skip != 0)
+            {
+                GridData = DataOperations.PerformSkip(GridData, dataManagerRequest.Skip); //Paging
+            }
+            if (dataManagerRequest.Take != 0)
+            {
+                GridData = DataOperations.PerformTake(GridData, dataManagerRequest.Take);
+            }
+            IDictionary<string, object> aggregates = new Dictionary<string, object>();
+            if (dataManagerRequest.Aggregates != null) // Aggregation
+            {
+                aggregates = DataUtil.PerformAggregation(GridData, dataManagerRequest.Aggregates);
+            }
+            if (dataManagerRequest.Group != null && dataManagerRequest.Group.Any()) //Grouping
+            {
+                foreach (var group in dataManagerRequest.Group)
+                {
+                    GridData = DataUtil.Group<NonStaffWorkExperience>(GridData, group, dataManagerRequest.Aggregates, 0, dataManagerRequest.GroupByFormatter);
+                }
+            }
+            return dataManagerRequest.RequiresCounts ? new DataResult() { Result = GridData, Count = _count, Aggregates = aggregates } : (object)GridData;
+        }
+        public override async Task<Object> InsertAsync(DataManager dataManager, object value, string key)
+        {
+            try
+            {
+                await _SystemSettings.GetLoginCredentials();
+                var val = (value as NonStaffWorkExperience);
+                if(val != null)
+                {
+                    if (val.WorkExperienceId == 0)
+                    {
+                        Http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _SystemSettings.AccessToken);
+                        string json = Newtonsoft.Json.JsonConvert.SerializeObject(val);
+                        StringContent httpContent = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+
+                        var result = await Http.PostAsync($"{_ApiConfig.BaseUrl}NonStaff/PostExperience", httpContent);
+                        if (result.IsSuccessStatusCode)
+                        {
+                            var content = await result.Content.ReadAsStringAsync();
+                            var data = JsonSerializer.Deserialize<Response>(content, _options);
+                            if(data != null)
+                            {
+                                if (data.IsSuccess)
+                                {
+                                    toastService.ShowSuccess(data.Message);
+                                }
+                                else
+                                {
+                                    toastService.ShowError(data.Message);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            toastService.ShowError(result.ReasonPhrase);
+                        }
+
+                    }
+                    else
+                    {
+                        Http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _SystemSettings.AccessToken);
+                        string json = Newtonsoft.Json.JsonConvert.SerializeObject(val);
+                        StringContent httpContent = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+
+                        var result = await Http.PutAsync($"{_ApiConfig.BaseUrl}NonStaff/PutExperience", httpContent);
+                        if (result.IsSuccessStatusCode)
+                        {
+                            var content = await result.Content.ReadAsStringAsync();
+                            var data = JsonSerializer.Deserialize<Response>(content, _options);
+                            if(data != null)
+                            {
+                                if (data.IsSuccess)
+                                {
+                                    toastService.ShowSuccess(data.Message);
+                                }
+                                else
+                                {
+                                    toastService.ShowError(data.Message);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            toastService.ShowError(result.ReasonPhrase);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                toastService.ShowError(ex.Message.ToString());
+            }
+            return value;
+        }
+        public override async Task<object> RemoveAsync(DataManager dataManager, object value, string keyField, string key)
+        {
+            //try
+            //{
+            //    int data = (int)value;
+            //    using (var dbContext = new MUCOBADIContext())
+            //    {
+            //        var exists = dbContext.AAdministrationPhase.FirstOrDefault(o => o.AdministrationPhaseId == data);
+            //        if (exists != null)
+            //        {
+            //            dbContext.AAdministrationPhase.Remove(exists);
+            //        }
+            //        await dbContext.SaveChangesAsync();
+            //    }
+            //}
+            //catch (Exception ex)
+            //{
+            //    toastService.ShowError(ex.Message.ToString());
+            //}
+
+
+            return value;
+        }
+        public override async Task<object> UpdateAsync(DataManager dataManager, object value, string keyField, string key)
+        {
+            try
+            {
+                await _SystemSettings.GetLoginCredentials();
+                var val = (value as NonStaffWorkExperience);
+                if(val != null)
+                {
+                    if (val.WorkExperienceId == 0)
+                    {
+                        Http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _SystemSettings.AccessToken);
+                        string json = Newtonsoft.Json.JsonConvert.SerializeObject(val);
+                        StringContent httpContent = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+
+                        var result = await Http.PostAsync($"{_ApiConfig.BaseUrl}NonStaff/PostExperience", httpContent);
+                        if (result.IsSuccessStatusCode)
+                        {
+                            var content = await result.Content.ReadAsStringAsync();
+                            var data = JsonSerializer.Deserialize<Response>(content, _options);
+                            if(data != null)
+                            {
+                                if (data.IsSuccess)
+                                {
+                                    toastService.ShowSuccess(data.Message);
+                                }
+                                else
+                                {
+                                    toastService.ShowError(data.Message);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            toastService.ShowError(result.ReasonPhrase);
+                        }
+
+                    }
+                    else
+                    {
+                        Http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _SystemSettings.AccessToken);
+                        string json = Newtonsoft.Json.JsonConvert.SerializeObject(val);
+                        StringContent httpContent = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+
+                        var result = await Http.PutAsync($"{_ApiConfig.BaseUrl}NonStaff/PutExperience", httpContent);
+                        if (result.IsSuccessStatusCode)
+                        {
+                            var content = await result.Content.ReadAsStringAsync();
+                            var data = JsonSerializer.Deserialize<Response>(content, _options);
+                            if(data != null)
+                            {
+                                if (data.IsSuccess)
+                                {
+                                    toastService.ShowSuccess(data.Message);
+                                }
+                                else
+                                {
+                                    toastService.ShowError(data.Message);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            toastService.ShowError(result.ReasonPhrase);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                toastService.ShowError(ex.Message.ToString());
+            }
+
+            return value;
+        }
+        public override async Task<object> BatchUpdateAsync(DataManager dm, object Changed, object Added, object Deleted, string KeyField, string Key, int? dropIndex)
+        {
+            object? products = null;
+            try
+            {
+                await _SystemSettings.GetLoginCredentials();
+                if (Changed != null)
+                {
+                    products = Changed;
+                    foreach (var val in (List<NonStaffWorkExperience>)Changed)
+                    {
+                        if(val != null)
+                        {
+                            if (val.WorkExperienceId == 0)
+                            {
+                                Http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _SystemSettings.AccessToken);
+                                string json = Newtonsoft.Json.JsonConvert.SerializeObject(val);
+                                StringContent httpContent = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+
+                                var result = await Http.PostAsync($"{_ApiConfig.BaseUrl}NonStaff/PostExperience", httpContent);
+                                if (result.IsSuccessStatusCode)
+                                {
+                                    var content = await result.Content.ReadAsStringAsync();
+                                    var data = JsonSerializer.Deserialize<Response>(content, _options);
+                                    if(data != null)
+                                    {
+                                        if (data.IsSuccess)
+                                        {
+                                            toastService.ShowSuccess(data.Message);
+                                        }
+                                        else
+                                        {
+                                            toastService.ShowError(data.Message);
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    toastService.ShowError(result.ReasonPhrase);
+                                }
+
+                            }
+                            else
+                            {
+                                Http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _SystemSettings.AccessToken);
+                                string json = Newtonsoft.Json.JsonConvert.SerializeObject(val);
+                                StringContent httpContent = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+
+                                var result = await Http.PutAsync($"{_ApiConfig.BaseUrl}NonStaff/PutExperience", httpContent);
+                                if (result.IsSuccessStatusCode)
+                                {
+                                    var content = await result.Content.ReadAsStringAsync();
+                                    var data = JsonSerializer.Deserialize<Response>(content, _options);
+                                    if(data != null)
+                                    {
+                                        if (data.IsSuccess)
+                                        {
+                                            toastService.ShowSuccess(data.Message);
+                                        }
+                                        else
+                                        {
+                                            toastService.ShowError(data.Message);
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    toastService.ShowError(result.ReasonPhrase);
+                                }
+                            }
+                        }
+                    }
+
+                }
+                if (Added != null)
+                {
+                    products = Added;
+                    foreach (var val in (List<NonStaffWorkExperience>)Added)
+                    {
+                        if(val != null)
+                        {
+                            if (val.WorkExperienceId == 0)
+                            {
+                                Http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _SystemSettings.AccessToken);
+                                string json = Newtonsoft.Json.JsonConvert.SerializeObject(val);
+                                StringContent httpContent = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+
+                                var result = await Http.PostAsync($"{_ApiConfig.BaseUrl}NonStaff/PostExperience", httpContent);
+                                if (result.IsSuccessStatusCode)
+                                {
+                                    var content = await result.Content.ReadAsStringAsync();
+                                    var data = JsonSerializer.Deserialize<Response>(content, _options);
+                                    if(data != null)
+                                    {
+                                        if (data.IsSuccess)
+                                        {
+                                            toastService.ShowSuccess(data.Message);
+                                        }
+                                        else
+                                        {
+                                            toastService.ShowError(data.Message);
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    toastService.ShowError(result.ReasonPhrase);
+                                }
+
+                            }
+                            else
+                            {
+                                Http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _SystemSettings.AccessToken);
+                                string json = Newtonsoft.Json.JsonConvert.SerializeObject(val);
+                                StringContent httpContent = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+
+                                var result = await Http.PutAsync($"{_ApiConfig.BaseUrl}NonStaff/PutExperience", httpContent);
+                                if (result.IsSuccessStatusCode)
+                                {
+                                    var content = await result.Content.ReadAsStringAsync();
+                                    var data = JsonSerializer.Deserialize<Response>(content, _options);
+                                    if(data != null)
+                                    {
+                                        if (data.IsSuccess)
+                                        {
+                                            toastService.ShowSuccess(data.Message);
+                                        }
+                                        else
+                                        {
+                                            toastService.ShowError(data.Message);
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    toastService.ShowError(result.ReasonPhrase);
+                                }
+                            }
+                        }
+                    }
+
+                }
+                if (Deleted != null)
+                {
+                    products = Deleted;
+                    //foreach (var rec in (List<OrderDetails>)Deleted)
+                    //{
+                    //    Orders.Remove(Orders.Where(or => or.OrderID == rec.OrderID).FirstOrDefault());
+                    //}
+
+                }
+            }
+            catch (Exception ex)
+            {
+                toastService.ShowError(ex.Message.ToString());
+            }
+            return products;
+        }
+    }
+    public async Task OnWorkExperienceActionComplete(ActionEventArgs<NonStaffWorkExperience> args)
+    {
+        try
+        {
+            if (args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Add) || args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.BeginEdit))
+            {
+                WorkExperienceGrid.PreventRender(false);
+                if(!string.IsNullOrEmpty(args.RowData.AppointmentLetterUrl) && !string.IsNullOrEmpty(args.RowData.AppointmentLetterExt))
+                {
+                    WorkExperienceDocumentString = await GetImageString(args.RowData.AppointmentLetterUrl, args.RowData.AppointmentLetterExt,"WorkExperience");
+                }
+
+            }
+        }
+        catch (Exception ex)
+        {
+            await ToastObj.ShowAsync(new ToastModel { Title = "Error!", Content = ex.Message.ToString(), CssClass = "e-toast-danger", Icon = "e-error toast-icons" });
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+
+    }
+    public string GetWorkExperienceHeader(NonStaffWorkExperience Value)
+    {
+        if (Value.WorkExperienceId == 0)
+        {
+            return "Add a New Work Experience";
+        }
+        else
+        {
+            return "Edit Details for " + Value.EmployerName;
+        }
+    }
+
+    private async void OnWorkExperienceChange(UploadChangeEventArgs args)
+    {
+        try
+        {
+            await UploadWorkExperienceSpinner.ShowAsync();
+            foreach (var file in args.Files)
+            {
+                if (file.FileInfo.Size <= 5242880)
+                {
+                    file.Stream.Position = 0;
+                    if (file.FileInfo.Type.ToLower().Contains("pdf") || file.FileInfo.Type.ToLower().Contains("doc"))
+                    {
+
+                        string fileName = string.Empty;
+                        if (file.FileInfo.Type.Trim().Contains("doc"))
+                        {
+
+                            fileName = WorkExperienceReviewData.Organisation +"_"+WorkExperienceReviewData.JobTitle+ "_" + NonstaffId + ".pdf";
+
+                            //Create a new document
+                            Syncfusion.DocIO.DLS.WordDocument document;
+                            if (file.FileInfo.Type.Contains("doc") && !file.FileInfo.Type.Contains("docx"))
+                            {
+                                document = new Syncfusion.DocIO.DLS.WordDocument(file.Stream, Syncfusion.DocIO.FormatType.Doc);
+                            }
+                            else
+                            {
+                                document = new Syncfusion.DocIO.DLS.WordDocument(file.Stream, Syncfusion.DocIO.FormatType.Docx);
+                            }
+                            //Creates an instance of the DocToPDFConverter
+                            DocIORenderer render = new DocIORenderer();//Converts Word document into PDF document
+                            PdfDocument pdfDocument = render.ConvertToPDF(document);
+
+                            MemoryStream _ms = new MemoryStream();
+                            pdfDocument.Save(_ms);
+                            _ms.Position = 0;
+
+                            byte[] bytes = file.Stream.ToArray();
+                            string base64 = Convert.ToBase64String(bytes, 0, bytes.Length);
+
+                            ImageUpload m = new ImageUpload()
+                            {
+                                ImageName = fileName,
+                                ImageExt = file.FileInfo.Type.Trim(),
+                                Imagebyte = bytes,
+                                Rootfolder="WorkExperience"
+                            };
+
+
+                            var Requestresult = await _DocumentUploadModel.SaveDocument(m,AccessToken);
+                            if (Requestresult != null && Requestresult.IsSuccess)
+                            {
+                                var result = "data:application/pdf;base64," + base64;
+                                WorkExperienceReviewData.AppointmentLetterUrl = fileName;
+                                WorkExperienceReviewData.AppointmentLetterExt = "pdf";
+                                 WorkExperienceDocumentString = result;
+
+                                bytes = null;
+                                _ms.Close();
+                                _ms.Dispose();
+                                pdfDocument.Close();
+                                pdfDocument.Dispose();
+                                render.Dispose();
+                                document.Close();
+                                document.Dispose();
+                            }
+                            else if(Requestresult != null)
+                            {
+                                await ToastObj.ShowAsync(new ToastModel { Title = "Error!", Content = Requestresult.Message, CssClass = "e-toast-danger", Icon = "e-error toast-icons" });
+                            }
+                        }
+                        else
+                        {
+                             fileName = WorkExperienceReviewData.Organisation +"_"+WorkExperienceReviewData.JobTitle+ "_" + NonstaffId + ".pdf";
+                            MemoryStream ms = new MemoryStream();
+                            file.Stream.WriteTo(ms);
+                            ms.Position = 0;
+                            byte[] bytes = file.Stream.ToArray();
+                            string base64 = Convert.ToBase64String(bytes, 0, bytes.Length);
+
+                            ImageUpload m = new ImageUpload()
+                            {
+                                ImageName = fileName,
+                                ImageExt = file.FileInfo.Type.Trim(),
+                                Imagebyte = bytes,
+                                Rootfolder="WorkExperience"
+                            };
+
+                            var Requestresult = await _DocumentUploadModel.SaveDocument(m,AccessToken);
+                            if (Requestresult != null && Requestresult.IsSuccess)
+                            {
+                                var result = "data:application/pdf;base64," + base64;
+                                WorkExperienceReviewData.AppointmentLetterUrl = fileName;
+                                WorkExperienceReviewData.AppointmentLetterExt = file.FileInfo.Type.Trim();
+                                 WorkExperienceDocumentString = result;
+                                bytes = null;
+                            }
+                            else if(Requestresult != null)
+                            {
+                                await ToastObj.ShowAsync(new ToastModel { Title = "Error!", Content = Requestresult.Message, CssClass = "e-toast-danger", Icon = "e-error toast-icons" });
+                            }
+                        }
+                    }
+                    else if (file.FileInfo.Type.ToLower().Contains("png") || file.FileInfo.Type.ToLower().Contains("gif") || file.FileInfo.Type.ToLower().Contains("jpeg"))
+                    {
+                        string fileName = WorkExperienceReviewData.Organisation +"_"+WorkExperienceReviewData.JobTitle+ "_" + NonstaffId + ".pdf";
+                        byte[] bytes = file.Stream.ToArray();
+                        string base64 = Convert.ToBase64String(bytes, 0, bytes.Length);
+
+                        ImageUpload m = new ImageUpload()
+                        {
+                            ImageName = fileName,
+                            ImageExt = file.FileInfo.Type.Trim(),
+                            Imagebyte = bytes,
+                            Rootfolder="WorkExperience"
+                        };
+
+                        var Requestresult = await _DocumentUploadModel.SaveDocument(m,AccessToken);
+                        if (Requestresult != null && Requestresult.IsSuccess)
+                        {
+                            var result = "data:image/" + file.FileInfo.Type.Trim() + ";base64," + base64;
+                            WorkExperienceReviewData.AppointmentLetterUrl = fileName;
+                            WorkExperienceReviewData.AppointmentLetterExt = file.FileInfo.Type.Trim();
+                             WorkExperienceDocumentString = result;
+                            bytes = null;
+                        }
+                        else if(Requestresult != null)
+                            {
+                                await ToastObj.ShowAsync(new ToastModel { Title = "Error!", Content = Requestresult.Message, CssClass = "e-toast-danger", Icon = "e-error toast-icons" });
+                            }
+                    }
+                    else
+                    {
+                        await ToastObj.ShowAsync(new ToastModel { Title = "Error!", Content = "Please ensure that the uploaded document is either a pdf or doc or docx or image(png/Jpeg/gif).", CssClass = "e-toast-danger", Icon = "e-error toast-icons" });
+                    }
+
+                    //Save infor into the DB
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            await ToastObj.ShowAsync(new ToastModel { Title = "Error!", Content = ex.Message.ToString(), CssClass = "e-toast-danger", Icon = "e-error toast-icons" });
+        }
+        finally
+        {
+            await UploadWorkExperienceSpinner.HideAsync();
+            StateHasChanged();
+        }
+
+    }
+
+    private async Task<string> GetImageString(string imageUrl, string ext,string Rootfolder)
+    {
+        string result = null;
+        try
+        {
+            if (!string.IsNullOrEmpty(imageUrl))
+            {
+                ImageUpload a = await _DocumentUploadModel.GetDocument(imageUrl,Rootfolder,AccessToken);
+
+                if (a != null)
+                {
+                    if (a.ImageExt.Contains("pdf"))
+                    {
+                        string base64String = Convert.ToBase64String(a.Imagebyte, 0, a.Imagebyte.Length);
+                        result = "data:application/pdf;base64," + base64String;
+                    }
+                    else
+                    {
+                        string base64String = Convert.ToBase64String(a.Imagebyte, 0, a.Imagebyte.Length);
+                        result = "data:image/" + a.ImageExt + ";base64," + base64String;
+                    }
+
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            await ToastObj.ShowAsync(new ToastModel { Title = "Error!", Content = ex.Message.ToString(), CssClass = "e-toast-danger", Icon = "e-error toast-icons" });
+        }
+        return result;
+    }
+
+}
